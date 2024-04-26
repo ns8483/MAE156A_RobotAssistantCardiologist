@@ -1,3 +1,5 @@
 # MAE156A_RobotAssistantCardiologist
 MAE 156B Capstone Project: Code for automation of TEE (Trans-esophageal Echocardiography) probe. 
-![plot](./photos/system_diagram.png)
+
+
+![plot](./images/system_diagram.png)
