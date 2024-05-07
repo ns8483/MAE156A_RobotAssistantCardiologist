@@ -1,93 +1,26 @@
-// Rotation
+// Tip Rotation
 int EN_TIP_PIN = 10; // Enable
 int STEP_TIP_PIN = 9; // Step
 int DIR_TIP_PIN = 8; // Direction
 int tipGearRatio = 40; //40:1 ratio
+
+// Handle Rotation
 int EN_HANDLE_PIN = 7; // Enable
 int STEP_HANDLE_PIN = 6; // Step
 int DIR_HANDLE_PIN = 5; // Direction
 double handleGearRatio = 6.67; //6.67:1 ratio
 
-// Linear
-int enA = 11; // Motor contoller voltage control (PWM)
-int in1 = 12; // Motor direction
-int in2 = 13; // Motor direction
-int encoderPinA = 2; // Hall Sensor digital signal 
-int encoderPinB = 3; // 90 deg phase difference
-int power = 255; // PWM power sent to motor controller (0-255 min-max)
-float position = 0; // actuator position [mm]
-int rotDir = 0; // 0 = retracting, 1 = extending)
-float pulseFraction = (float) 1/45; // 45 pulses per mm of extension
-volatile boolean A_set = false;
-volatile boolean B_set = false;
+// Linear Actuator
+int ENA_PIN_NUM = 11; // Motor contoller voltage control (PWM)
+int IN1_PIN_NUM = 12; // Motor direction
+int IN2_PIN_NUM = 13; // Motor direction
+int ENCODERA_PIN_NUM = 2; // Hall Sensor digital signal 
+int ENCODERB_PIN_NUM = 3; // 90 deg phase difference
 
-int customDelay, customDelayMapped;
-
-// Define the number of steps per revolution for your stepper motor
-const int microSteps = 8;
-const int stepsPerRevolution = 200*microSteps;  // Change this according to your motor's specification
-// Keep track of angle
-double currentAngle = 0.00;
-const int wormGearRatio = 40; //40:1 ratio
-int stepperDir = 0; // 0 CW ; 1 CCW
-
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200); // allow printing to command line
-  // Translation
-  pinMode(enA, OUTPUT);
-  pinMode(in1, OUTPUT);
-  pinMode(in2, OUTPUT);
-  pinMode(encoderPinA, INPUT_PULLUP);
-  pinMode(encoderPinB, INPUT_PULLUP);
-  // Check for changes on feedback pin
-  attachInterrupt(digitalPinToInterrupt(encoderPinA), updateEncoder, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(encoderPinB), updateEncoder, CHANGE);
-  // Wait for things to load
-  Serial.println("Booting...\n");
-  delay(5000);
-  Serial.println("Sending to Origin...\n");
-  setupActuator();
-}
-
-void loop() {
-  // Prompt the user for input:
-  Serial.println(String("Please enter an option number: \n") + String("1. Linear Translation \n") + String("2. Rotation \n"));
-  while (!Serial.available()) {} // Wait for input
-  int userInput = Serial.parseInt(); // Read the input from the serial monitor:
-  Serial.read();// clear buffer
-  switch (userInput) {
-    case 1:
-      Serial.println(String("Please enter an option number: \n") + String("1. Incremental Steps\n") + String("2. Absolute Position \n") + String("3. Back \n"));
-      while (!Serial.available()) {}// Wait for input
-      userInput = Serial.parseInt(); // Read the input from the serial monitor:
-      Serial.read();// clear buffer
-      switch (userInput) {
-        case 1:
-          linearSteps();
-          break;
-        case 2:
-          linearAbs();
-          break;
-        case 3:
-          break;
-      }
-      break;
-    case 2:
-      Serial.println(String("Please enter an option number: \n") + String("1. Incremental Steps\n") + String("2. Back \n"));
-      while (!Serial.available()) {}// Wait for input
-      userInput = Serial.parseInt(); // Read the input from the serial monitor:
-      Serial.read();// clear buffer
-      switch (userInput) {
-        case 1:
-          rotationScript();
-          break;
-        case 2:
-          break;
-      }
-      break;
-    }
-}
+// Global Vars
+float linearStepSize = 1.00; // default linear step size [mm]
+float rotationStepSize = 1.00; // default rotation step size [deg]
+int microSteps = 8; // default number of stepper microsteps 
 
 class Stepper {
   private:
@@ -99,7 +32,6 @@ class Stepper {
     int stepperDir = 0; // 0 CW ; 1 CCW
     int microSteps; // 8 by default
     int gearRatio;
-    static unsigned long currentMillis; // Static member variable to hold the current millis value
     bool hasFinishedRotating = true;
     int steps; // keeps track of steps
     float targetSteps; // converts delta theta to target steps
@@ -204,96 +136,91 @@ class Stepper {
     }
 };
 
+class LinearActuator{
+  private:
+    int enAPin; //enables actuator
+    int in1Pin; // direction pin 1
+    int in2Pin; // direction pin 2
+    int encoderAPin; // one of two sensors on hall sensor
+    int encoderBPin; // one of two sensors on hall sensor
+    int power = 255; // PWM power sent to motor controller (0-255 min-max)
+    float position = 0; // actuator position [mm]
+    int rotDir = 0; // 0 = retracting, 1 = extending)
+    float pulseFraction = (float) 1/45; // 45 pulses per mm of extension
+    volatile boolean A_set = false;
+    volatile boolean B_set = false;
+  public:
+    // Setup Constructor 
+    LinearActuator(int ENA_PIN_NUM, int IN1_PIN_NUM, int IN2_PIN_NUM, int ENCODERA_PIN_NUM, int ENCODERB_PIN_NUM) {
+      enAPin = ENA_PIN_NUM;
+      in1Pin = IN1_PIN_NUM;
+      in2Pin = IN2_PIN_NUM;
+      encoderAPin = ENCODERA_PIN_NUM;
+      encoderBPin = ENCODERB_PIN_NUM;
+      pinMode(enAPin, OUTPUT);
+      pinMode(in1Pin, OUTPUT);
+      pinMode(in2Pin, OUTPUT);
+      pinMode(encoderAPin, INPUT_PULLUP);
+      pinMode(encoderBPin, INPUT_PULLUP);
+      attachInterrupt(digitalPinToInterrupt(encoderAPin), encoderUpdatePos, CHANGE); // Check for changes on feedback pins
+      attachInterrupt(digitalPinToInterrupt(encoderBPin), encoderUpdatePos, CHANGE);
+      while(!isCalibrated()){} // wait until actuator has finished calibrating
+    }
 
-Stepper stepperTip(EN_TIP_PIN, STEP_TIP_PIN, DIR_TIP_PIN, 8, tipGearRatio);
-Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, 8, handleGearRatio);
-Stepper stepperArray[] = {stepperTip, stepperHandle};
+    static void encoderUpdatePos() {
+      static boolean A_prev = false;
+      static boolean B_prev = false;
+      
+      boolean A_current = digitalRead(encoderAPin) == HIGH;
+      boolean B_current = digitalRead(encoderBPin) == HIGH;
 
-void rotationScript(){
-  float stepSize = 1.0f;
-  // Prompt the user for input:
-  Serial.println(String("Choose a step size: \n") + String("1. 0.1 deg \n") + String("2. 1.0 deg \n") + String("3. 10.0 deg \n"));
-  while (!Serial.available()) {} // Wait for input
-  int userInput = Serial.parseInt(); // Read the input from the serial monitor:
-  Serial.read();// clear buffer
-  switch (userInput) {
-    case 1:
-      stepSize = 0.1f;
-      break;
-    case 2:
-      stepSize = 1.0f;
-      break;
-    case 3:
-      stepSize = 10.0f;
-      break;
-  }
-  // Prompt the user for input:
-  Serial.println(String("Current Step Size: ") + String(stepSize) + " deg \n" + String("D key: Rotate CW \n") + String("A key: Rotate CCW \n"));
-  while (true) {
-    if (Serial.available()) {
-      char inChar = Serial.read();  //read the character
-      if (inChar == 'd'){
-        Stepper::incrementalPosMulti(stepSize,1,stepperArray);
-      } else if (inChar == 'a'){
-        Stepper::incrementalPosMulti(stepSize,0,stepperArray);
+      if (A_prev && !A_current && B_prev && B_current) {
+        // CW transition: A goes LOW before B
+        rotDir = 0; // retracting
+        position = position - pulseFraction; // subtract from current position
+      } else if (A_prev && A_current && B_prev && !B_current) {
+        // CCW transition: B goes LOW before A
+        rotDir = 1; // extending
+        position = position + pulseFraction; // add to current position
+      }
+
+      A_prev = A_current;
+      B_prev = B_current;
+      //Serial.println(String(A_prev) + String(B_prev));
+      Serial.println(String("Current Position: ") + String(position) + String(" mm\n"));
+    }
+
+    void changeDirection(int chosenDirection) {
+      if (chosenDirection == 1) { // if chosen to extend
+            digitalWrite(in1, HIGH);
+            digitalWrite(in2, LOW);
+            analogWrite(enA, 255);
+            rotDir = 1;
+      } else if (chosenDirection == 0) { // if chosen to retarct
+            digitalWrite(in1, LOW);
+            digitalWrite(in2, HIGH);
+            analogWrite(enA, 255);
+            rotDir = 0;
       }
     }
-  }
-} 
 
-void linearSpeedControl() {
-  power = analogRead(A1); // Read potentiometer
-  power = map(power, 0, 1023, 0, 255); // Convert the analog input from 0 to 1024, to 300 to 3000
-}
+    void stopActuator() {
+      digitalWrite(in1, LOW); // stop
+      digitalWrite(in2, LOW);
+      analogWrite(enA, 0); // disable actuator
+    }
 
-void updateEncoder() {
-  static boolean A_prev = false;
-  static boolean B_prev = false;
-  
-  boolean A_current = digitalRead(encoderPinA) == HIGH;
-  boolean B_current = digitalRead(encoderPinB) == HIGH;
+    void incrementalPos(float deltaX, int direction) {
+      changeDirection(direction) // change direction of actuator to chosen
+      while(!finishedTranslating(deltaX)) {} // wait for step completion
+      stopActuator();
+    }
 
-  if (A_prev && !A_current && B_prev && B_current) {
-    // CW transition: A goes LOW before B
-    rotDir = 0; // retracting
-    position = position - pulseFraction;
-  } else if (A_prev && A_current && B_prev && !B_current) {
-    // CCW transition: B goes LOW before A
-    rotDir = 1; // extending
-    position = position + pulseFraction;
-  }
-
-  A_prev = A_current;
-  B_prev = B_current;
-  //Serial.println(String(A_prev) + String(B_prev));
-  Serial.println("Current Position: " + String(position) + " mm\n");
-}
-
-void changeDirection(int chosenDirection) {
-  if (chosenDirection == 1) {
-        digitalWrite(in1, HIGH); // extend
-        digitalWrite(in2, LOW);
-        analogWrite(enA, 255);
-        rotDir = 1;
-  } else if (chosenDirection == 0) {
-        digitalWrite(in1, LOW); // retarct
-        digitalWrite(in2, HIGH);
-        analogWrite(enA, 255);
-        rotDir = 0;
-  }
-}
-
-void stopActuator() {
-  digitalWrite(in1, LOW); // Stop
-  digitalWrite(in2, LOW);
-  analogWrite(enA, 0);
-}
-
-bool finishedStep(float stepSize) {
+    bool finishedTranslating(float deltaX) {
       if(rotDir == 0){stepSize = -1*stepSize;} // make stepSize negative if retarcting
-      static bool hasFinished = false;
-      static float oldPosition = position;
-      static float targetPosition = oldPosition + stepSize; 
+      static bool hasFinished = false; // 
+      static float oldPosition = position; // set initial position to current position
+      static float targetPosition = oldPosition + stepSize; // calculate targetPosition 
       // update the statics with new values upon successful prior completion
       if(hasFinished) {
         oldPosition = position;
@@ -302,93 +229,100 @@ bool finishedStep(float stepSize) {
       }
       //Serial.println("\n Target: " + String(targetPosition) + "\n Old: " + String(oldPosition) + "\n Current: " + String(position) + "\n Step: " + String(stepSize));
       // check to see if target has been met
-      if(rotDir == 1) {
-        if(position >= targetPosition){
-          hasFinished = true; 
-          return 1; // actuator has finished step
+      if(rotDir == 1) { // if extending
+        if(position >= targetPosition){ // if position has reached target position 
+          hasFinished = true; // actuator has reached target and finished
+          return 1; // return true
         } else {
-          return 0; // actuator still extending
+          return 0; // actuator still extending return false
       }
-      } else if(rotDir == 0) {
-        if(position <= targetPosition){
-          hasFinished = true; 
-          return 1; // actuator has finished step
+      } else if(rotDir == 0) { // if retracting
+        if(position <= targetPosition){ // if position has reached target position 
+          hasFinished = true; // actuator has reached target and finished 
+          return 1; // return true
         } else {
-          return 0; // actuator still retracting
+          return 0; // actuator still retracting return false
         }
       }
+    }
+
+    bool isCalibrated(){
+      digitalWrite(in1, LOW); // retract
+      digitalWrite(in2, HIGH);
+      analogWrite(enA, 255);
+      delay(50); // wait for actuator to start moving
+      while (!isZerod(position)) { //wait until actuator is zerod
+        delay(50);
+      }
+      position = 0; // set home position to zero
+      digitalWrite(in1, LOW); // stop movement
+      digitalWrite(in2, LOW);
+      delay(100);
+      Serial.println("Ready to Use! \n");
+      return 1;
+    }
+
+    bool isZerod(float x) {
+      static float old_value = 1; // give x some random placeholder value
+      if(x != old_value) {
+        // actuator is still detracting
+        old_value = x;
+        return 0;
+      } else {
+        // actuator is done detracting
+        return 1;
+      }
+    }
+};
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); // allow printing to command line
+  // wait for things to load
+  Serial.println("Booting...\n");
+  delay(500);
+  // initialize class objects
+  Stepper stepperTip(EN_TIP_PIN, STEP_TIP_PIN, DIR_TIP_PIN, microSteps, tipGearRatio);
+  Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, microSteps, handleGearRatio);
+  Stepper stepperArray[] = {stepperTip, stepperHandle};
+  LinearActuator linearActuator(ENA_PIN_NUM, EN1_PIN_NUM, EN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM)
+  loop() // run main loop
 }
 
-void linearSteps() {
-  float stepSize = 1.0f;
-  // Prompt the user for input:
-  Serial.println(String("Choose a step size: \n") + String("1. 0.1 mm \n") + String("2. 1.0 mm \n") + String("3. 10.0 mm \n"));
+
+void loop(){
+  Serial.println("Welcome to UCSD Team 24 Cardiology Robot");
+  Serial.println(String("Please enter an option number: \n") + String("1. Wired Keyboard Controller \n") + String("2. Wireless Controller\n") + String("3. Settings"));
   while (!Serial.available()) {} // Wait for input
   int userInput = Serial.parseInt(); // Read the input from the serial monitor:
   Serial.read();// clear buffer
   switch (userInput) {
     case 1:
-      stepSize = 0.1f;
-      break;
+      Serial.println("Wired Keyboard Controller \n");
+      Serial.println(String("Current positioning: \n") + String("Linear Translation: 0.00 mm \n") + String("Rotation: 0.00 deg\n"));
+      Serial.println(String("Keyboard Controls: \n") + String("W key: extend \n") + String("S key: retract") + String("D key: rotate CW") + String("A key: rotate CCW"));
+      while (!Serial.available()) {};// Wait for input
+      char inChar = Serial.read(); // Read the character from the serial monitor:
+      if (inChar == 'w'){
+        linearActuator.incrementalPos(linearStepSize, 1); // linear actuator extension
+        break;
+      } else if (inChar == 's'){
+        linearActuator.incrementalPos(linearStepSize, 0); // linear actuator retraction
+        break;
+      }else if (inChar == 'd'){
+        Stepper::incrementalPosMulti(rotationStepSize,1,stepperArray); // synchronous stepper movement direction 1 (CW)
+        break;
+      }else if (inCHar == 'a'){
+        Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 0 (CCW)
+        break;
+      }
     case 2:
-      stepSize = 1.0f;
       break;
     case 3:
-      stepSize = 10.0f;
-      break;
+      break
   }
-  // Prompt the user for input:
-  Serial.println(String("Current Step Size: ") + String(stepSize) + " mm \n" + String("W key: Step Forward\n") + String("S key: Step Back\n"));
-  while (1==1) {
-    if (Serial.available()) {
-      char inChar = Serial.read();  //read the character
-      if (inChar == 'w'){
-        changeDirection(1);
-        while(!finishedStep(stepSize)) {} // wait for step completion
-        stopActuator();
-      } else if (inChar == 's'){
-        changeDirection(0);
-        while(!finishedStep(stepSize)) {} // wait for step completion
-        stopActuator();
-      }
-    }
-  } // Wait for input
-}
-
-void linearAbs() {
-
-}
-
-void setupActuator(){
-      // detract fully
-      digitalWrite(in1, LOW);
-      digitalWrite(in2, HIGH);
-      analogWrite(enA, 255);
-      delay(300); // wait for actuator to start moving
-      while (!isZerod(position)) {
-        //wait until actuator is zerod
-        delay(50);
-      }
-      // zero constants 
-      position = 0;
-      digitalWrite(in1, LOW);
-      digitalWrite(in2, LOW);
-      delay(100);
-      Serial.println("Ready to Use! \n");
 }
 
 
-
-bool isZerod(float x) {
-    static float old_value = 1; // give x some random placeholder value
-    if(x != old_value) {
-      // actuator is still detracting
-      old_value = x;
-      return 0;
-    } else {
-      // actuator is done detracting
-      return 1;
-    }
-}
 
   
