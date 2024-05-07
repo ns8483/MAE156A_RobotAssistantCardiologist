@@ -149,6 +149,31 @@ class LinearActuator{
     float pulseFraction = (float) 1/45; // 45 pulses per mm of extension
     volatile boolean A_set = false;
     volatile boolean B_set = false;
+    static LinearActuator* instancePointer; // instance pointer allows indirect access of non-static vars from static methods
+    
+    static void encoderUpdatePos(int encoder) { // attachInterrupt() function requires a static function as its argument
+      static boolean A_prev = false;
+      static boolean B_prev = false;
+      
+      boolean A_current = digitalRead(instancePointer->encoderAPin) == HIGH;
+      boolean B_current = digitalRead(instancePointer->encoderBPin) == HIGH;
+
+      if (A_prev && !A_current && B_prev && B_current) {
+        // CW transition: A goes LOW before B
+        instancePointer->rotDir = 0; // retracting
+        instancePointer->position = instancePointer->position - instancePointer->pulseFraction; // subtract from current position
+      } else if (A_prev && A_current && B_prev && !B_current) {
+        // CCW transition: B goes LOW before A
+        instancePointer->rotDir = 1; // extending
+        instancePointer->position = instancePointer->position + instancePointer->pulseFraction; // add to current position
+      }
+
+      A_prev = A_current;
+      B_prev = B_current;
+      //Serial.println(String(A_prev) + String(B_prev));
+      Serial.println(String("Current Position: ") + String(instancePointer->position) + String(" mm\n"));
+    }
+
   public:
     // Setup Constructor 
     LinearActuator(int ENA_PIN_NUM, int IN1_PIN_NUM, int IN2_PIN_NUM, int ENCODERA_PIN_NUM, int ENCODERB_PIN_NUM) {
@@ -167,64 +192,41 @@ class LinearActuator{
       while(!isCalibrated()){} // wait until actuator has finished calibrating
     }
 
-    static void encoderUpdatePos() {
-      static boolean A_prev = false;
-      static boolean B_prev = false;
-      
-      boolean A_current = digitalRead(encoderAPin) == HIGH;
-      boolean B_current = digitalRead(encoderBPin) == HIGH;
-
-      if (A_prev && !A_current && B_prev && B_current) {
-        // CW transition: A goes LOW before B
-        rotDir = 0; // retracting
-        position = position - pulseFraction; // subtract from current position
-      } else if (A_prev && A_current && B_prev && !B_current) {
-        // CCW transition: B goes LOW before A
-        rotDir = 1; // extending
-        position = position + pulseFraction; // add to current position
-      }
-
-      A_prev = A_current;
-      B_prev = B_current;
-      //Serial.println(String(A_prev) + String(B_prev));
-      Serial.println(String("Current Position: ") + String(position) + String(" mm\n"));
-    }
-
     void changeDirection(int chosenDirection) {
       if (chosenDirection == 1) { // if chosen to extend
-            digitalWrite(in1, HIGH);
-            digitalWrite(in2, LOW);
-            analogWrite(enA, 255);
+            digitalWrite(in1Pin, HIGH);
+            digitalWrite(in2Pin, LOW);
+            analogWrite(enAPin, 255);
             rotDir = 1;
       } else if (chosenDirection == 0) { // if chosen to retarct
-            digitalWrite(in1, LOW);
-            digitalWrite(in2, HIGH);
-            analogWrite(enA, 255);
+            digitalWrite(in1Pin, LOW);
+            digitalWrite(in2Pin, HIGH);
+            analogWrite(enAPin, 255);
             rotDir = 0;
       }
     }
 
     void stopActuator() {
-      digitalWrite(in1, LOW); // stop
-      digitalWrite(in2, LOW);
-      analogWrite(enA, 0); // disable actuator
+      digitalWrite(in1Pin, LOW); // stop
+      digitalWrite(in2Pin, LOW);
+      analogWrite(enAPin, 0); // disable actuator
     }
 
     void incrementalPos(float deltaX, int direction) {
-      changeDirection(direction) // change direction of actuator to chosen
+      changeDirection(direction); // change direction of actuator to chosen
       while(!finishedTranslating(deltaX)) {} // wait for step completion
       stopActuator();
     }
 
     bool finishedTranslating(float deltaX) {
-      if(rotDir == 0){stepSize = -1*stepSize;} // make stepSize negative if retarcting
+      if(rotDir == 0){deltaX = -1*deltaX;} // make stepSize negative if retarcting
       static bool hasFinished = false; // 
       static float oldPosition = position; // set initial position to current position
-      static float targetPosition = oldPosition + stepSize; // calculate targetPosition 
+      static float targetPosition = oldPosition + deltaX; // calculate targetPosition 
       // update the statics with new values upon successful prior completion
       if(hasFinished) {
         oldPosition = position;
-        targetPosition = oldPosition + stepSize;
+        targetPosition = oldPosition + deltaX;
         hasFinished = false;
       }
       //Serial.println("\n Target: " + String(targetPosition) + "\n Old: " + String(oldPosition) + "\n Current: " + String(position) + "\n Step: " + String(stepSize));
@@ -247,18 +249,17 @@ class LinearActuator{
     }
 
     bool isCalibrated(){
-      digitalWrite(in1, LOW); // retract
-      digitalWrite(in2, HIGH);
-      analogWrite(enA, 255);
+      digitalWrite(in1Pin, LOW); // retract
+      digitalWrite(in2Pin, HIGH);
+      analogWrite(enAPin, 255);
       delay(50); // wait for actuator to start moving
       while (!isZerod(position)) { //wait until actuator is zerod
         delay(50);
       }
       position = 0; // set home position to zero
-      digitalWrite(in1, LOW); // stop movement
-      digitalWrite(in2, LOW);
+      digitalWrite(in1Pin, LOW); // stop movement
+      digitalWrite(in2Pin, LOW);
       delay(100);
-      Serial.println("Ready to Use! \n");
       return 1;
     }
 
@@ -281,16 +282,16 @@ void setup() {
   // wait for things to load
   Serial.println("Booting...\n");
   delay(500);
-  // initialize class objects
-  Stepper stepperTip(EN_TIP_PIN, STEP_TIP_PIN, DIR_TIP_PIN, microSteps, tipGearRatio);
-  Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, microSteps, handleGearRatio);
-  Stepper stepperArray[] = {stepperTip, stepperHandle};
-  LinearActuator linearActuator(ENA_PIN_NUM, EN1_PIN_NUM, EN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM)
-  loop() // run main loop
+  loop(); // run main loop
 }
 
 
 void loop(){
+  // initialize class objects
+  Stepper stepperTip(EN_TIP_PIN, STEP_TIP_PIN, DIR_TIP_PIN, microSteps, tipGearRatio);
+  Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, microSteps, handleGearRatio);
+  Stepper stepperArray[] = {stepperTip, stepperHandle};
+  LinearActuator linearActuator(ENA_PIN_NUM, IN1_PIN_NUM, IN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM);
   Serial.println("Welcome to UCSD Team 24 Cardiology Robot");
   Serial.println(String("Please enter an option number: \n") + String("1. Wired Keyboard Controller \n") + String("2. Wireless Controller\n") + String("3. Settings"));
   while (!Serial.available()) {} // Wait for input
@@ -312,14 +313,14 @@ void loop(){
       }else if (inChar == 'd'){
         Stepper::incrementalPosMulti(rotationStepSize,1,stepperArray); // synchronous stepper movement direction 1 (CW)
         break;
-      }else if (inCHar == 'a'){
+      }else if (inChar == 'a'){
         Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 0 (CCW)
         break;
       }
     case 2:
       break;
     case 3:
-      break
+      break;
   }
 }
 
