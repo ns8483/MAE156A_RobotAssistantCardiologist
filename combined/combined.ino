@@ -34,6 +34,9 @@ int IN2_PIN_NUM = 13; // Motor direction
 int ENCODERA_PIN_NUM = 2; // Hall Sensor digital signal 
 int ENCODERB_PIN_NUM = 3; // 90 deg phase difference
 
+// Servos
+int Servos1_PIN = 9; // change later
+
 // Global Vars
 float linearStepSize = 1.00; // default linear step size [mm]
 float rotationStepSize = 1.00; // default rotation step size [deg]
@@ -296,10 +299,10 @@ class LinearActuator{
 };
 
 //setting up stepper and linear actuator by initializing instances
-Stepper stepperTip(EN_TIP_PIN, STEP_TIP_PIN, DIR_TIP_PIN, microSteps, tipGearRatio);
-Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, microSteps, handleGearRatio);
-Stepper stepperArray[] = {stepperTip, stepperHandle};
-LinearActuator linearActuator(ENA_PIN_NUM, IN1_PIN_NUM, IN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM);
+//Stepper stepperTip(EN_TIP_PIN, STEP_TIP_PIN, DIR_TIP_PIN, microSteps, tipGearRatio);
+//Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, microSteps, handleGearRatio);
+//Stepper stepperArray[] = {stepperTip, stepperHandle};
+//LinearActuator linearActuator(ENA_PIN_NUM, IN1_PIN_NUM, IN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM);
 
 // Satisfy the IDE
 #ifdef dobogusinclude
@@ -311,6 +314,7 @@ USB Usb;
 //USBHub Hub1(&Usb); // Some dongles have a hub inside
 BTD Btd(&Usb); // You have to create the Bluetooth Dongle instance like so
 
+
 /* You can create the instance of the XBOXONESBT class in two ways */
 // This will start an inquiry and then pair with the Xbox One S controller - you only have to do this once
 // You will need to hold down the Sync and Xbox button at the same time, the Xbox One S controller will then start to blink rapidly indicating that it is in pairing mode
@@ -320,11 +324,11 @@ XBOXONESBT Xbox(&Btd, PAIR);
 //XBOXONESBT Xbox(&Btd);
 
 void setup() {
+  Serial.begin(9600);
   pos1 = 0; // position will initially be zero
   pos2 = 0;
   calibrate_servo(x, pos1, 9); // calibrate servos and attach each to appropriate pin
   calibrate_servo(y, pos2, 10);
-  Serial.begin(115200);
   verify_bt();
 }
 
@@ -336,56 +340,59 @@ void loop() {
     if (Xbox.getAnalogHat(LeftHatX) > 7500 || Xbox.getAnalogHat(LeftHatX) < -7500 || Xbox.getAnalogHat(RightHatX) > 7500 || Xbox.getAnalogHat(RightHatX) < -7500) {
       //need to check if at extremities and fine tune for value at extremity (should not be 7500 will change)
       if (Xbox.getAnalogHat(LeftHatX) > 7500) {
-        Serial.print(F("LeftHatX: ")); //prints left in for debugging joystick purposes
-        Serial.print(Xbox.getAnalogHat(LeftHatX));
-        Serial.print("\t");
+        Serial.println("Right"); //prints left in for debugging joystick purposes
+        //Serial.print(Xbox.getAnalogHat(LeftHatX));
+        //Serial.print("\t");
         pos1=pos1+1; //moves the position of top servo one a tick to the right to control position of tip
         x.write(pos1);
       }
       if (Xbox.getAnalogHat(LeftHatX) < -7500) {
-        Serial.print(F("LeftHatY: "));
-        Serial.print(Xbox.getAnalogHat(LeftHatY));
-        Serial.print("\t");
+        Serial.println("Left");
+        //Serial.print(Xbox.getAnalogHat(LeftHatY));
+        //Serial.print("\t");
         pos1=pos1-1; //moves the position of top servo one a tick to the left to control position of tip
         x.write(pos1);
       }
       if (Xbox.getAnalogHat(RightHatX) > 7500) {
-        Serial.print(F("RightHatX: "));
-        Serial.print(Xbox.getAnalogHat(RightHatY));
+        Serial.println("Right");
+        //Serial.print(Xbox.getAnalogHat(RightHatY));
         pos2=pos2+1; //moves the position of bottom servo one a tick to the right to control position of tip
         y.write(pos2);
       }
       if (Xbox.getAnalogHat(RightHatX) < -7500) {
-        Serial.print(F("RightHatY: "));
-        Serial.print(Xbox.getAnalogHat(RightHatY));
+        Serial.print("Left");
+        //Serial.print(Xbox.getAnalogHat(RightHatY));
         pos2=pos2-1; //moves the position of bottom servo one a tick to the left to control position of tip
         y.write(pos2);
       }
       Serial.println();
     }
     if (Xbox.getButtonClick(UP))
-      linearActuator.incrementalPos(1, 1); // linear actuator extension
+      //linearActuator.incrementalPos(1, 1); // linear actuator extension
     if (Xbox.getButtonClick(DOWN))
-      linearActuator.incrementalPos(1, 0); // linear actuator retraction
+      //linearActuator.incrementalPos(1, 0); // linear actuator retraction
     if (Xbox.getButtonClick(LEFT))
-      Stepper::incrementalPosMulti(1,0,stepperArray); // synchronous stepper movement direction 0 (CCW)
+      //Stepper::incrementalPosMulti(1,0,stepperArray); // synchronous stepper movement direction 0 (CCW)
     if (Xbox.getButtonClick(RIGHT))
-      Stepper::incrementalPosMulti(1,1,stepperArray); // synchronous stepper movement direction 1 (CW)
+      //Stepper::incrementalPosMulti(1,1,stepperArray); // synchronous stepper movement direction 1 (CW)
     Serial.println();
   }
 
 }
 
 void verify_bt() {
-#if !defined(__MIPSEL__)
-  while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
-#endif
-  if (Usb.Init() == -1) {
-    Serial.print(F("\r\nOSC did not start"));
-    while (1); //halt
+//  #if !defined(__MIPSEL__)
+//  while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
+//#endif
+//  if (Usb.Init() == -1) {
+//    Serial.print(F("\r\nOSC did not start"));
+//    while (1); //halt
+//  }
+  while (!Xbox.connected()) {
+    Serial.println("Xbox One Controller Not Found!");
+    if (Xbox.connected()){break;}
   }
-  //verify that bluetooth is connected
-  Serial.print(F("\r\nXbox One S Bluetooth Library Started"));
+  Serial.println("Xbox One Controller Connected!");
 }
 
 void calibrate_servo(Servo s, int pos, int pin) {
@@ -393,9 +400,11 @@ void calibrate_servo(Servo s, int pos, int pin) {
   for (pos = 0; pos <= 180; pos += 1){
     s.write(0);
   }
-  delay(1000);
-  s.write(180);
-  delay(1000);
+  int i = 0;
+  for (i=0; i<180; i++){
+    s.write(i);
+    delay(50);
+  }
   s.write(90);
   delay(1000);
 }

@@ -18,8 +18,8 @@ int ENCODERA_PIN_NUM = 3; // Hall Sensor digital signal
 int ENCODERB_PIN_NUM = 2; // 90 deg phase difference
 
 // Global Vars
-float linearStepSize = 1.00; // default linear step size [mm]
-float rotationStepSize = 1.00; // default rotation step size [deg]
+float linearStepSize = 5.00; // default linear step size [mm]
+float rotationStepSize = 5.00; // default rotation step size [deg]
 int microSteps = 8; // default number of stepper microsteps 
 
 class Stepper {
@@ -220,6 +220,7 @@ class LinearActuator{
 
     void incrementalPos(float deltaX, int direction) {
       if(position-deltaX < 0 && direction == 0){return;} // cancel operation if trying to retract past home
+      if(direction == 0){deltaX = -1*deltaX;} // negative deltaX for retraction
       changeDirection(direction); // change direction of actuator to chosen
       while(!finishedTranslating(deltaX)) {} // wait for step completion
       stopActuator();
@@ -227,21 +228,18 @@ class LinearActuator{
     }
 
     bool finishedTranslating(float deltaX) {
+      float decelerationPosError = 0.67;
+      if(deltaX < 0){decelerationPosError = -1*decelerationPosError;}
       static bool hasFinished = false; // 
       static float oldPosition = position; // set initial position to current position
       static float targetPosition = oldPosition + deltaX - decelerationPosError; // calculate targetPosition 
       // update the statics with new values upon successful prior completion
       if(hasFinished) {
-        if(rotDir == 0 && deltaX > 0){ // if switching to retarction
-        deltaX = -1*deltaX; // make stepSize negative
-        decelerationPosError = -1*decelerationPosError; // make decelerationPosError negative if retracting 
-        } 
-        Serial.println("\n2Target: " + String(targetPosition) + "\n Old: " + String(oldPosition) + "\n Current: " + String(position) + "\n Step: " + String(deltaX) + "\n direction: " + String(rotDir) + String("posError: ") + String(decelerationPosError));
         oldPosition = position;
         targetPosition = oldPosition + deltaX - decelerationPosError;
         hasFinished = false;
       }
-      Serial.println("\n3Target: " + String(targetPosition) + "\n Old: " + String(oldPosition) + "\n Current: " + String(position) + "\n Step: " + String(deltaX) + "\n direction: " + String(rotDir) + String("posError: ") + String(decelerationPosError));
+      //Serial.println("\n3Target: " + String(targetPosition) + "\n Old: " + String(oldPosition) + "\n Current: " + String(position) + "\n Step: " + String(deltaX) + "\n direction: " + String(rotDir) + String("posError: ") + String(decelerationPosError));
       // check to see if target has been met
       if(rotDir == 1) { // if extending
         if(position >= targetPosition){ // if position has reached target position 
@@ -324,9 +322,9 @@ void loop(){
         } else if (inChar == 's'){
           linearActuator.incrementalPos(linearStepSize, 0); // linear actuator retraction
         }else if (inChar == 'd'){
-          Stepper::incrementalPosMulti(rotationStepSize,1,stepperArray); // synchronous stepper movement direction 1 (CW)
+          Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 1 (CW)
         }else if (inChar == 'a'){
-          Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 0 (CCW)
+          Stepper::incrementalPosMulti(rotationStepSize,1,stepperArray); // synchronous stepper movement direction 0 (CCW)
         }else if (inChar == 'x'){
           break;
         }
