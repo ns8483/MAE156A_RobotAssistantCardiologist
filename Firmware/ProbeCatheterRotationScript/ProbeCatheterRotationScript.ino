@@ -1,22 +1,28 @@
 // Tip Rotation
 int EN_TIP_PIN = 10; // Enable
 int STEP_TIP_PIN = 9; // Step
-int DIR_TIP_PIN = 8; // Direction
+int DIR_TIP_PIN = 13; // Direction
 int tipGearRatio = 40; //40:1 ratio
-
 // Handle Rotation
-int EN_HANDLE_PIN = 7; // Enable
+int EN_HANDLE_PIN = 4; // Enable
 int STEP_HANDLE_PIN = 6; // Step
 int DIR_HANDLE_PIN = 5; // Direction
 double handleGearRatio = 6.67; //6.67:1 ratio
-
 // Linear Actuator
 int ENA_PIN_NUM = 11; // Motor contoller voltage control (PWM)
 int IN1_PIN_NUM = 12; // Motor direction
 int IN2_PIN_NUM = 13; // Motor direction
 int ENCODERA_PIN_NUM = 3; // Hall Sensor digital signal 
 int ENCODERB_PIN_NUM = 2; // 90 deg phase difference
-
+// Knob Rotation
+int SERVO_TOP_PIN = 0; // servo for top knob
+int SERVO_BOT_PIN = 0; // servo for bottom knob
+// NRF Transceiver
+int NRF_CSN_PIN = 8;
+int NRF_CE_PIN = 7;
+int NRF_SCK_PIN = 52;
+int NRF_MOSI_PIN = 51;
+int NRF_MISO_PIN = 50;
 // Global Vars
 float linearStepSize = 5.00; // default linear step size [mm]
 float rotationStepSize = 5.00; // default rotation step size [deg]
