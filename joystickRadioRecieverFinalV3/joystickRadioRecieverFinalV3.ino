@@ -41,8 +41,8 @@ float servoStepSize = 5.00; // default knob rotation step size [deg]
 int microSteps = 8; // default number of stepper microsteps
 
 // Radio initialized
-int CE_PIN = 7;
-int CSN_PIN = 8;
+#define CE_PIN 7;
+#define CSN_PIN 8;
 RF24 radio(CE_PIN,CSN_PIN);
 const byte address[6] = "00001";
 
