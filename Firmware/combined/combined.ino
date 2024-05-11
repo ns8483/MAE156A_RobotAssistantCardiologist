@@ -37,7 +37,7 @@ float linearStepSize = 5.00; // default linear step size [mm]
 float rotationStepSize = 5.00; // default rotation step size [deg]
 float servoStepSize = 5.00; // default knob rotation step size [deg]
 int microSteps = 8; // default number of stepper microsteps
-const byte addresses[][6] = {"00001","00002"}; // for 
+const byte address[6] = "00001"; 
 
 void setup() {
   Serial.begin(115200); // open serial
@@ -54,6 +54,10 @@ void loop(){
   Servo servoTop;
   Servo servoBot;
   RF24 radio(NRF_CE_PIN,NRF_CSN_PIN);
+  //radio setup
+  radio.begin();
+  radio.openReadingPipe(0, addresses[1]);
+  radio.setPALevel(RF24_PA_MIN);
   // servo setup
   servoTop.attach(SERVO_TOP_PIN); // attach feedback pins to servo objects
   servoBot.attach(SERVO_BOT_PIN); 
@@ -115,7 +119,22 @@ void loop(){
         Serial.read(); // clear buffer
       }
     case 2:
-      break;
+      Serial.println("Wireless Controller \n");
+      radio.startListening();
+      while(true){
+        if (radio.available()) {
+          while (radio.available()){
+            int angleV = 0;
+            radio.read(&angleV,sizeof(angleV));
+            Serial.println(String(angleV));
+          }
+          delay(5);
+          radio.stopListening();
+          char text[32] = "";
+          radio.read(&text, sizeof(text));
+        }
+        Serial.println("ye");
+      }
     case 3:
       break;
   }
