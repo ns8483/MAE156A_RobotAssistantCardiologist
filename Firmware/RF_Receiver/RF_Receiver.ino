@@ -18,10 +18,9 @@ void setup() {
 
 void loop() {
   if (radio.available()) {
-    char text[32] = "";
-    radio.read(&text, sizeof(text));
-    Serial.println(text);
+    int joyPosArray[4] = {};
+    radio.read(&joyPosArray, sizeof(joyPosArray));
+    Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
   }
   delay(200);
-  Serial.println("no");
 }

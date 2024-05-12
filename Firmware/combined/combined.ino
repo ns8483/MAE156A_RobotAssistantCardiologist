@@ -55,9 +55,7 @@ void loop(){
   Servo servoBot;
   RF24 radio(NRF_CE_PIN,NRF_CSN_PIN);
   //radio setup
-  radio.begin();
-  radio.openReadingPipe(0, addresses[1]);
-  radio.setPALevel(RF24_PA_MIN);
+  
   // servo setup
   servoTop.attach(SERVO_TOP_PIN); // attach feedback pins to servo objects
   servoBot.attach(SERVO_BOT_PIN); 
