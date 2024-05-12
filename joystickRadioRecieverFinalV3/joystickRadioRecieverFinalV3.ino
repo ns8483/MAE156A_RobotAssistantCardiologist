@@ -26,8 +26,6 @@ int SERVO_TOP_PIN = 12; // servo for top knob (change)
 int SERVO_BOT_PIN = 11; // servo for bottom knob (change)
 int servoTopPos = 90; // default position
 int servoBotPos = 90; // default position
-Servo servoTop; // top servo object creation
-Servo servoBot; // bottom servo object creation
 // NRF Transceiver
 int NRF_CSN_PIN = 8;
 int NRF_CE_PIN = 7;
@@ -35,18 +33,17 @@ int NRF_SCK_PIN = 52;
 int NRF_MOSI_PIN = 51;
 int NRF_MISO_PIN = 50;
 const byte address[6] = "00001";
-RF24 radio(NRF_CE_PIN,NRF_CSN_PIN); // radio object creation
-// Joystick tolerances after mapping
-int UPLIM = 80;
-int DOWNLIM = -80;
-int RLIM = 80;
-int LLIM = -80;
 // Global Vars
 float linearStepSize = 1.00; // default linear step size [mm]
 float rotationStepSize = 1.00; // default rotation step size [deg]
 float servoStepSize = 1.00; // default knob rotation step size [deg]
 int microSteps = 8; // default number of stepper microsteps
-bool busy = false; // true if the system is doing task
+int joyCritical = 80; // Joystick critical actuation value after mapping
+int joyPosArray[4] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick 
+//Global objects
+Servo servoTop; // top servo object creation
+Servo servoBot; // bottom servo object creation
+RF24 radio(NRF_CE_PIN,NRF_CSN_PIN); // radio object creation
 
 void setup() {
   Serial.begin(115200);
@@ -76,61 +73,43 @@ void loop(){
     Serial.println(String("connecting..."));
     if (radio.available()) {
       while(radio.available() && !busy) {
-        int joyPosArray[4] = {};
         radio.read(&joyPosArray, sizeof(joyPosArray));
         Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
-        if (joyPosArray[0] <= LLIM){
-          busy = true;
+        if (joyPosArray[0] <= -1*joyCritical){
           if (servoTopPos != 0){
             Serial.println("left");
             servoTopPos = servoTopPos - servoStepSize;
             servoTop.write(servoTopPos);
             Serial.println(servoTopPos);
           }
-          busy = false;
-        } else if (joyPosArray[0] >= RLIM){
-          busy = true;
+        }else if (joyPosArray[0] >= joyCritical){
           if (servoTopPos != 180){
             Serial.println(String(servoTopPos));
             servoTopPos = servoTopPos + servoStepSize;
             servoTop.write(servoTopPos);
             Serial.println(servoTopPos);
           }
-          busy = false;
-        } else if (joyPosArray[1] <= DOWNLIM){
-          busy = true;
+        }else if (joyPosArray[1] <= -1*joyCritical){
           if (servoBotPos != 0){
             servoBotPos = servoBotPos - servoStepSize;
             servoBot.write(servoBotPos);
             Serial.println(servoBotPos);
           }
-          busy = false;
-        } else if (joyPosArray[1] >= UPLIM){
-            busy = true;
+        }else if (joyPosArray[1] >= joyCritical){
             if (servoBotPos != 180){
               servoBotPos = servoBotPos + servoStepSize;
               servoBot.write(servoBotPos);
               Serial.println(servoBotPos);
             }
-            busy = false;
-        } else if (joyPosArray[2] >= RLIM){
-          busy = true;
+        }else if (joyPosArray[2] >= joyCritical && Stepper::finishedMoving){ // if left joystick points right and stepper is not already moving
           Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 1 (CW)
-          busy = false;
-        } else if (joyPosArray[2] <= LLIM){
-          busy = true;
+        }else if (joyPosArray[2] <= -1*joyCritical && Stepper::finishedMoving){ // if left joystick points left and stepper is not already moving
           Stepper::incrementalPosMulti(rotationStepSize,1,stepperArray); // synchronous stepper movement direction 0 (CCW)
-          busy = false;
-        }else if (joyPosArray[3] >= UPLIM){
-          busy = true;
-          Serial.println("hey");
+        }else if (joyPosArray[3] >= joyCritical && linearActuator.finishedMoving){ // if left joystick points up and actuator is not already moving
           linearActuator.incrementalPos(linearStepSize, 1); // linear actuator extension
-          busy = false;
-        }else if (joyPosArray[3] <= DOWNLIM){
+        }else if (joyPosArray[3] <= -1*joyCritical && linearActuator.finishedMoving){ // if left joystick points down and actuator is not already moving
           linearActuator.incrementalPos(linearStepSize, 0); // linear actuator retraction
-          busy = false;
         }
-        delay(200);
       }
     }
   }
