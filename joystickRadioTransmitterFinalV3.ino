@@ -1,12 +1,17 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <LiquidCrystal.h>
+
+//instantiating LCD display
+const int rs, en, d4, d5, d6, d7;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 //Defining and instantiating radio and parameters
 int CE_PIN = 9;
 int CSN_PIN = 10;
 RF24 radio(CE_PIN,CSN_PIN);
-const byte address[6] = "00001";
+const byte addresses[][6] = {"00001","00002"};
 
 //Defining joystick pins
 #define LR_TIP_PIN A0
@@ -22,11 +27,15 @@ int UD_MAX = 100;
 
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   radio.begin();
-  radio.openWritingPipe(address);
+  radio.openWritingPipe(addresses[1]);
+  radio.openReadingPipe(1, addresses[0]);
   radio.setPALevel(RF24_PA_MIN);
   radio.stopListening();
+
+  //setting up LCD display
+  lcd.begin(16,2);
 }
 
 void loop() {
@@ -42,5 +51,17 @@ void loop() {
   joyPosArray[2]= map(joyPos[2], 0, 1023, 100,-100);
   joyPosArray[3]= map(joyPos[3], 0, 1023, -100,100);
   radio.write(&joyPosArray, sizeof(joyPos));
-  delay(200);
+  radio.startListening();
+  while (!radio.available()) {
+    Serial.println("RADIO NOT AVAILABLE");
+  }
+  int posMetrics[4];
+  radio.read(&posMetrics, sizeof(posMetrics));
+  int topServo = posMetrics[0];
+  int botServo = posMetrics[1];
+  int stepper = posMetrics[2];
+  int linActuator = posMetrics[3];
+  String message = "Right/Left Flexion: " + String(topServo) + "\n" + "Up/Down Flexion: " + String(botServo) + "\n" + "Rotation: " + String(stepper) + "\n" + "Translation: " + String(linActuator);
+  lcd.print(message);
+  radio.stopListening();
 }
