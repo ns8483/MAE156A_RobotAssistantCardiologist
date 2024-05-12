@@ -32,14 +32,16 @@ int NRF_CE_PIN = 7;
 int NRF_SCK_PIN = 52;
 int NRF_MOSI_PIN = 51;
 int NRF_MISO_PIN = 50;
-const byte address[6] = "00001";
+const byte addresses[][6] = {"00001", "00002";
 // Global Vars
 float linearStepSize = 1.00; // default linear step size [mm]
 float rotationStepSize = 1.00; // default rotation step size [deg]
 float servoStepSize = 1.00; // default knob rotation step size [deg]
+int targetPos = 0; //target position for servo which is update for every use of joystick
 int microSteps = 8; // default number of stepper microsteps
 int joyCritical = 80; // Joystick critical actuation value after mapping
-int joyPosArray[4] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick 
+int joyPosArray[4] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
+int posMetrics[4] = {}; // [0]: top servo, [1]: bottom servo, [2]: stepper motor, [3]: linear actuator
 //Global objects
 Servo servoTop; // top servo object creation
 Servo servoBot; // bottom servo object creation
@@ -58,12 +60,13 @@ void setup() {
   servoBot.attach(SERVO_BOT_PIN); 
   // radio setup
   radio.begin();
-  radio.openReadingPipe(0, address); // 00001
+  radio.openReadingPipe(1, addresses[1]); // 00001
+  radio.openWritingPipe(addresses[0]);
   radio.setPALevel(RF24_PA_MIN);
-  radio.startListening();
 }
 
 void loop(){
+  radio.startListening();
   // initialize class objects
   Stepper stepperTip(EN_TIP_PIN, STEP_TIP_PIN, DIR_TIP_PIN, microSteps, tipGearRatio);
   Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, microSteps, handleGearRatio);
@@ -77,30 +80,50 @@ void loop(){
         Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
         if (joyPosArray[0] <= -1*joyCritical){
           if (servoTopPos != 0){
+            targetPos = servoTopPos - servoStepSize;
             Serial.println("left");
             servoTopPos = servoTopPos - servoStepSize;
             servoTop.write(servoTopPos);
             Serial.println(servoTopPos);
+            if (servoTopPos == targetPos){
+              delay(20);
+              break;
+            }
           }
         }else if (joyPosArray[0] >= joyCritical){
           if (servoTopPos != 180){
+            targetPos = servoTopPos + servoStepSize;
             Serial.println(String(servoTopPos));
             servoTopPos = servoTopPos + servoStepSize;
             servoTop.write(servoTopPos);
             Serial.println(servoTopPos);
+            if (servoTopPos == targetPos){
+              delay(20);
+              break;
+            }
           }
         }else if (joyPosArray[1] <= -1*joyCritical){
           if (servoBotPos != 0){
+            targetPos = servoBotPos - servoStepSize;
             servoBotPos = servoBotPos - servoStepSize;
             servoBot.write(servoBotPos);
             Serial.println(servoBotPos);
+            if (servoBotPos == targetPos){
+              delay(20);
+              break;
+            }
           }
         }else if (joyPosArray[1] >= joyCritical){
-            if (servoBotPos != 180){
-              servoBotPos = servoBotPos + servoStepSize;
-              servoBot.write(servoBotPos);
-              Serial.println(servoBotPos);
+          if (servoBotPos != 180){
+            targetPos = servoBotPos + servoStepSize;
+            servoBotPos = servoBotPos + servoStepSize;
+            servoBot.write(servoBotPos);
+            Serial.println(servoBotPos);
+            if (servoBotPos == targetPos){
+              delay(20);
+              break;
             }
+          }
         }else if (joyPosArray[2] >= joyCritical && Stepper::finishedMoving){ // if left joystick points right and stepper is not already moving
           Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 1 (CW)
         }else if (joyPosArray[2] <= -1*joyCritical && Stepper::finishedMoving){ // if left joystick points left and stepper is not already moving
@@ -113,4 +136,10 @@ void loop(){
       }
     }
   }
+  radio.stopListening();
+  posMetrics[0] = servoTopPos;
+  posMetrics[1] = servoBotPos;
+  posMetrics[2] = Stepper::currentAngle;
+  posMetrics[3] = linearActuator.position;
+  radio.write(&posMetrics, sizeof(posMetrics));
 }
