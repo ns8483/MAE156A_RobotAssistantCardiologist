@@ -25,6 +25,14 @@ int LR_MAX = 100;
 int UD_MIN = -100;
 int UD_MAX = 100;
 
+//pre instantiated for radio communication and mapping
+int joyPos[4] = {};
+int joyPosArray[4] = {};
+int posMetrics[4] = {};
+int topServo;
+int botServo;
+int stepper;
+int linActuator;
 
 void setup() {
   Serial.begin(115200);
@@ -40,8 +48,6 @@ void setup() {
 
 void loop() {
   //Sends it to radio for communication
-  int joyPos[4];
-  int joyPosArray[4];
   joyPos[0]= analogRead(LR_TIP_PIN);
   joyPos[1]= analogRead(UD_TIP_PIN);
   joyPos[2] = analogRead(LR_PROBE_PIN);
@@ -55,12 +61,11 @@ void loop() {
   while (!radio.available()) {
     Serial.println("RADIO NOT AVAILABLE");
   }
-  int posMetrics[4];
   radio.read(&posMetrics, sizeof(posMetrics));
-  int topServo = posMetrics[0];
-  int botServo = posMetrics[1];
-  int stepper = posMetrics[2];
-  int linActuator = posMetrics[3];
+  topServo = posMetrics[0];
+  botServo = posMetrics[1];
+  stepper = posMetrics[2];
+  linActuator = posMetrics[3];
   String message = "Right/Left Flexion: " + String(topServo) + "\n" + "Up/Down Flexion: " + String(botServo) + "\n" + "Rotation: " + String(stepper) + "\n" + "Translation: " + String(linActuator);
   lcd.print(message);
   radio.stopListening();
