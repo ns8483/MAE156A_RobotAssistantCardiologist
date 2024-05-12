@@ -37,7 +37,6 @@ const byte addresses[][6] = {"00001", "00002";
 float linearStepSize = 1.00; // default linear step size [mm]
 float rotationStepSize = 1.00; // default rotation step size [deg]
 float servoStepSize = 1.00; // default knob rotation step size [deg]
-int targetPos = 0; //target position for servo which is update for every use of joystick
 int microSteps = 8; // default number of stepper microsteps
 int joyCritical = 80; // Joystick critical actuation value after mapping
 int joyPosArray[4] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
@@ -75,54 +74,38 @@ void loop(){
   while(true) {
     Serial.println(String("connecting..."));
     if (radio.available()) {
-      while(radio.available() && !busy) {
+      while(radio.available()) {
         radio.read(&joyPosArray, sizeof(joyPosArray));
         Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
         if (joyPosArray[0] <= -1*joyCritical){
           if (servoTopPos != 0){
-            targetPos = servoTopPos - servoStepSize;
             Serial.println("left");
             servoTopPos = servoTopPos - servoStepSize;
             servoTop.write(servoTopPos);
             Serial.println(servoTopPos);
-            if (servoTopPos == targetPos){
-              delay(20);
-              break;
-            }
+            delay(20); //wait for servo to reach this position
           }
         }else if (joyPosArray[0] >= joyCritical){
           if (servoTopPos != 180){
-            targetPos = servoTopPos + servoStepSize;
             Serial.println(String(servoTopPos));
             servoTopPos = servoTopPos + servoStepSize;
             servoTop.write(servoTopPos);
             Serial.println(servoTopPos);
-            if (servoTopPos == targetPos){
-              delay(20);
-              break;
-            }
+            delay(20); // wait for servo to reach this position
           }
         }else if (joyPosArray[1] <= -1*joyCritical){
           if (servoBotPos != 0){
-            targetPos = servoBotPos - servoStepSize;
             servoBotPos = servoBotPos - servoStepSize;
             servoBot.write(servoBotPos);
             Serial.println(servoBotPos);
-            if (servoBotPos == targetPos){
-              delay(20);
-              break;
-            }
+            delay(20); //wait for servo to reach this position
           }
         }else if (joyPosArray[1] >= joyCritical){
           if (servoBotPos != 180){
-            targetPos = servoBotPos + servoStepSize;
             servoBotPos = servoBotPos + servoStepSize;
             servoBot.write(servoBotPos);
             Serial.println(servoBotPos);
-            if (servoBotPos == targetPos){
-              delay(20);
-              break;
-            }
+            delay(20); //wait for servo to reach this position
           }
         }else if (joyPosArray[2] >= joyCritical && Stepper::finishedMoving){ // if left joystick points right and stepper is not already moving
           Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 1 (CW)
