@@ -21,7 +21,7 @@ String linActuator;
 #define RIGHT_JOY_Y A1
 int RIGHT_SWITCH = 2;
 #define LEFT_JOY_X A2
-#define LEFT_JOY_Y A4
+#define LEFT_JOY_Y A3
 int LEFT_SWITCH = 3;
 
 //joystick limit parameters
@@ -35,7 +35,7 @@ void setup() {
   Serial.begin(115200);
   radio.begin();
   radio.openWritingPipe(addresses[1]);
-  radio.openReadingPipe(1, addresses[0]);
+  radio.openReadingPipe(0, addresses[0]);
   radio.setPALevel(RF24_PA_MIN);
   radio.stopListening();
 
@@ -54,6 +54,7 @@ void setup() {
 }
 
 void loop() {
+  delay(20);
   //Sends it to radio for communication
   int joyPos[4];
   int joyPosArray[4];
@@ -65,24 +66,28 @@ void loop() {
   joyPosArray[1]= map(joyPos[1], 0, 1023, 100, -100);
   joyPosArray[2]= map(joyPos[2], 0, 1023, 100,-100);
   joyPosArray[3]= map(joyPos[3], 0, 1023, -100,100);
-  radio.write(&joyPosArray, sizeof(joyPos));
+  radio.write(&joyPosArray, sizeof(joyPosArray));
   radio.startListening();
-  while (!radio.available()) {
-    Serial.println("RADIO NOT AVAILABLE");
+  delay(100);
+  if (radio.available()) {
+    int posMetrics[4];
+    radio.read(&posMetrics, sizeof(posMetrics));
+    topServo = String(posMetrics[0]);
+    botServo = String(posMetrics[1]);
+    stepper = String(posMetrics[2]);
+    linActuator = String(posMetrics[3]);
+    lcd.setCursor(10, 0);
+    lcd.print(topServo);
+    Serial.println("top servo: " + topServo);
+    lcd.setCursor(10, 1);
+    lcd.print(botServo);
+    Serial.println("bot servo: " + botServo);
+    lcd.setCursor(10, 2);
+    lcd.print(stepper);
+    Serial.println("stepper: " + stepper);
+    lcd.setCursor(13, 3);
+    lcd.print(linActuator);
+    Serial.println("lin actuator: " + linActuator);
+    radio.stopListening();
   }
-  int posMetrics[4];
-  radio.read(&posMetrics, sizeof(posMetrics));
-  topServo = String(posMetrics[0]);
-  botServo = String(posMetrics[1]);
-  stepper = String(posMetrics[2]);
-  linActuator = String(posMetrics[3]);
-  lcd.setCursor(10, 0);
-  lcd.print(topServo);
-  lcd.setCursor(10, 1);
-  lcd.print(botServo);
-  lcd.setCursor(10, 2);
-  lcd.print(stepper);
-  lcd.setCursor(13, 3);
-  lcd.print(linActuator);
-  radio.stopListening();
 }
