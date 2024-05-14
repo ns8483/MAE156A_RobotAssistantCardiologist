@@ -62,7 +62,6 @@ void setup() {
   radio.openReadingPipe(1, addresses[1]); // 00002
   radio.openWritingPipe(addresses[0]);
   radio.setPALevel(RF24_PA_MIN);
-  radio.startListening();
 }
 
 void loop(){
@@ -72,6 +71,8 @@ void loop(){
   Stepper stepperArray[] = {stepperTip, stepperHandle};
   LinearActuator linearActuator(ENA_PIN_NUM, IN1_PIN_NUM, IN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM);
   while(true) {
+    radio.startListening();
+    delay(20);
     if (radio.available()) {
       radio.read(&joyPosArray, sizeof(joyPosArray));
       Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
@@ -100,9 +101,9 @@ void loop(){
           servoBot.write(servoBotPos);
           delay(20); //wait for servo to reach this position
         }
-      }else if (joyPosArray[2] >= joyCritical && stepperTip.finishedMoving && stepperHandle.finishedMoving){ // if left joystick points right and stepper is not already moving
+      }else if (joyPosArray[2] >= joyCritical && stepperArray[0].finishedMoving && stepperArray[1].finishedMoving){ // if left joystick points right and stepper is not already moving
         Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 1 (CW)
-      }else if (joyPosArray[2] <= -1*joyCritical && stepperTip.finishedMoving && stepperHandle.finishedMoving){ // if left joystick points left and stepper is not already moving
+      }else if (joyPosArray[2] <= -1*joyCritical && stepperArray[0].finishedMoving && stepperArray[1].finishedMoving){ // if left joystick points left and stepper is not already moving
         Stepper::incrementalPosMulti(rotationStepSize,1,stepperArray); // synchronous stepper movement direction 0 (CCW)
       }else if (joyPosArray[3] >= joyCritical && linearActuator.finishedMoving){ // if left joystick points up and actuator is not already moving
         linearActuator.incrementalPos(linearStepSize, 1); // linear actuator extension
@@ -113,15 +114,11 @@ void loop(){
       }
     }
     radio.stopListening();
-    delay(100);
-    Serial.println(String(posMetrics[0]) + String(" ") + String(posMetrics[1]) + String(" ") + String(posMetrics[2]) + String(" ") + String(posMetrics[3]));
+    delay(20);
     posMetrics[0] = servoTopPos;
     posMetrics[1] = servoBotPos;
-    posMetrics[2] = stepperTip.currentAngle;
+    posMetrics[2] = stepperArray[0].currentAngle;
     posMetrics[3] = linearActuator.position;
     radio.write(&posMetrics, sizeof(posMetrics));
-    delay(100);
-    radio.startListening();
-    delay(100);
   }
 }
