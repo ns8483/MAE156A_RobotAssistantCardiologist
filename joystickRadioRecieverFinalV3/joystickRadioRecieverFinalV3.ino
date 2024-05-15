@@ -39,7 +39,7 @@ float rotationStepSize = 1.00; // default rotation step size [deg]
 float servoStepSize = 1.00; // default knob rotation step size [deg]
 int microSteps = 8; // default number of stepper microsteps
 int joyCritical = 80; // Joystick critical actuation value after mapping
-int joyPosArray[4] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
+int joyPosArray[5] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
 int posMetrics[4] = {}; // [0]: top servo, [1]: bottom servo, [2]: stepper motor, [3]: linear actuator
 //Global objects
 Servo servoTop; // top servo object creation
@@ -111,6 +111,20 @@ void loop(){
       }else if (joyPosArray[3] <= -1*joyCritical && linearActuator.finishedMoving){ // if left joystick points down and actuator is not already moving
         linearActuator.incrementalPos(linearStepSize, 0); // linear actuator retraction
         delay(20);
+      }
+      //look in transmitter code for explanation of this element
+      if (joyPosArray[4] == 1){
+        servoStepSize = servoStepSize + 1;
+      } else if (joyPosArray[4] == -1) {
+        servoStepSize = servoStepSize - 1;
+      } else if (joyPosArray[4] == 2) {
+        rotationStepSize = rotationStepSize + 1;
+      } else if (joyPosArray[4] == -2) {
+        rotationStepSize = rotationStepSize - 1;
+      } else if (joyPosArray[4] == 3) {
+        linearStepSize = linearStepSize + 1;
+      } else if (joyPosArray[4] == -3) {
+        linearStepSize = linearStepSize -1;
       }
     }
     radio.stopListening();
