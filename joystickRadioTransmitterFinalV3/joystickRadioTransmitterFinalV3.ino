@@ -123,7 +123,7 @@ void loop() {
       Serial.println(downCount);
       lcd.setCursor(19, downCount%4);
       lcd.print("*");
-      delay(400);
+      delay(200);
     }
     if (downCount == 0){
       lcd.clear();
