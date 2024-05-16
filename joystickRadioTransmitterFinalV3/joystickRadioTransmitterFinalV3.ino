@@ -71,11 +71,10 @@ void setup() {
 
 void loop() {
   radio.stopListening();
-  delay(20);
   //Sends it to radio for communication
   /*int joyPos[4];
   int joyPosArray[4];*/
-  int joyPosArray[5];
+  float joyPosArray[5];
   /*joyPos[0]= analogRead(RIGHT_JOY_X);
   joyPos[1]= analogRead(RIGHT_JOY_Y);
   joyPos[2] = analogRead(LEFT_JOY_X);
@@ -93,11 +92,11 @@ void loop() {
     lcd.setCursor(0,0);
     lcd.print("Exit Menu");
     lcd.setCursor(0,1);
-    lcd.print("+ or - F Step");
+    lcd.print("Flexion Step");
     lcd.setCursor(0,2);
-    lcd.print("+ or - R Step");
+    lcd.print("Rotation Step");
     lcd.setCursor(0,3);
-    lcd.print("10x or 0.1x T Step ");
+    lcd.print("Translation Step ");
     
     delay(100);
     int downCount = 0;
@@ -151,7 +150,7 @@ void loop() {
         }
       }
     }
-    joyPosArray[4] = downCount;
+    joyPosArray[4] = float(downCount);
     Serial.println(downCount);
     delay(500);
     lcd.clear();
@@ -167,31 +166,27 @@ void loop() {
 
   radio.write(&joyPosArray, sizeof(joyPosArray));  
   radio.startListening();
-  delay(20);
+  delay(5);
   if (radio.available()) {
-    int posMetrics[4];
+    float posMetrics[4];
     radio.read(&posMetrics, sizeof(posMetrics));
-    topServo = String(posMetrics[0]);
-    botServo = String(posMetrics[1]);
-    stepper = String(posMetrics[2]);
-    linActuator = String(posMetrics[3]);
+    topServo = String(int(posMetrics[0]));
+    botServo = String(int(posMetrics[1]));
+    stepper = String(int(posMetrics[2]));
+    linActuator = String(posMetrics[3],1);
     for (int i = 0; i < 3; i++){
-      if (posMetrics[i]<10){
+      if (posMetrics[i]<10 || (-100<posMetrics[i] && posMetrics[i]<0)){
         lcd.setCursor(11, i);
-        lcd.print(" ");
+        lcd.print("    ");
       }
-      else if(posMetrics[i]<100){
+      else if(posMetrics[i]<100 || (-10<posMetrics[i] && posMetrics[i]<0) ){
         lcd.setCursor(12, i);
-        lcd.print(" ");
+        lcd.print("    ");
       }
     }
     if (posMetrics[3]<10){
-      lcd.setCursor(14, 3);
-      lcd.print(" ");
-    }
-    else if (posMetrics[3]<100){
-      lcd.setCursor(15,3);
-      lcd.print(" ");
+      lcd.setCursor(19, 3);
+      lcd.print(" ");  
     }
     lcd.setCursor(10, 0);
     lcd.print(topServo + char(223));
