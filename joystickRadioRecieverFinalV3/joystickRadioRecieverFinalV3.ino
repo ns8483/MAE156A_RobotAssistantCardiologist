@@ -38,9 +38,9 @@ float linearStepSize = 1.00; // default linear step size [mm]
 float rotationStepSize = 1.00; // default rotation step size [deg]
 float servoStepSize = 1.00; // default knob rotation step size [deg]
 int microSteps = 8; // default number of stepper microsteps
-int joyCritical = 80; // Joystick critical actuation value after mapping
-int joyPosArray[5] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
-int posMetrics[4] = {}; // [0]: top servo, [1]: bottom servo, [2]: stepper motor, [3]: linear actuator
+float joyCritical = 80.0; // Joystick critical actuation value after mapping
+float joyPosArray[5] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
+float posMetrics[4] = {}; // [0]: top servo, [1]: bottom servo, [2]: stepper motor, [3]: linear actuator
 //Global objects
 Servo servoTop; // top servo object creation
 Servo servoBot; // bottom servo object creation
@@ -72,45 +72,51 @@ void loop(){
   LinearActuator linearActuator(ENA_PIN_NUM, IN1_PIN_NUM, IN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM);
   while(true) {
     radio.startListening();
-    delay(20);
+    delay(5);
     if (radio.available()) {
       radio.read(&joyPosArray, sizeof(joyPosArray));
+      delay(5);
       Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
       if (joyPosArray[0] <= -1*joyCritical){
         if (servoTopPos != 0){
           servoTopPos = servoTopPos - servoStepSize;
           servoTop.write(servoTopPos);
-          Serial.println(servoTopPos);
-          delay(20); //wait for servo to reach this position
+          delay(200); //wait for servo to reach this position
+          radio.flush_rx();
         }
       }else if (joyPosArray[0] >= joyCritical){
         if (servoTopPos != 180){
           servoTopPos = servoTopPos + servoStepSize;
           servoTop.write(servoTopPos);
-          delay(20); // wait for servo to reach this position
+          delay(200); //wait for servo to reach this position
+          radio.flush_rx();
         }
       }else if (joyPosArray[1] <= -1*joyCritical){
         if (servoBotPos != 0){
           servoBotPos = servoBotPos - servoStepSize;
           servoBot.write(servoBotPos);
-          delay(20); //wait for servo to reach this position
+          delay(200); //wait for servo to reach this position
+          radio.flush_rx();
         }
       }else if (joyPosArray[1] >= joyCritical){
         if (servoBotPos != 180){
           servoBotPos = servoBotPos + servoStepSize;
           servoBot.write(servoBotPos);
-          delay(20); //wait for servo to reach this position
+          delay(200); //wait for servo to reach this position
+          radio.flush_rx();
         }
-      }else if (joyPosArray[2] >= joyCritical && stepperArray[0].finishedMoving && stepperArray[1].finishedMoving){ // if left joystick points right and stepper is not already moving
+      }else if (joyPosArray[2] >= joyCritical){ // if left joystick points right and stepper is not already moving
         Stepper::incrementalPosMulti(rotationStepSize,0,stepperArray); // synchronous stepper movement direction 1 (CW)
-      }else if (joyPosArray[2] <= -1*joyCritical && stepperArray[0].finishedMoving && stepperArray[1].finishedMoving){ // if left joystick points left and stepper is not already moving
+        radio.flush_rx();
+      }else if (joyPosArray[2] <= -1*joyCritical){ // if left joystick points left and stepper is not already moving
         Stepper::incrementalPosMulti(rotationStepSize,1,stepperArray); // synchronous stepper movement direction 0 (CCW)
-      }else if (joyPosArray[3] >= joyCritical && linearActuator.finishedMoving){ // if left joystick points up and actuator is not already moving
+        radio.flush_rx();
+      }else if (joyPosArray[3] >= joyCritical){ // if left joystick points up 
         linearActuator.incrementalPos(linearStepSize, 1); // linear actuator extension
-        delay(20);
-      }else if (joyPosArray[3] <= -1*joyCritical && linearActuator.finishedMoving){ // if left joystick points down and actuator is not already moving
+        radio.flush_rx();
+      }else if (joyPosArray[3] <= -1*joyCritical){ // if left joystick points down
         linearActuator.incrementalPos(linearStepSize, 0); // linear actuator retraction
-        delay(20);
+        radio.flush_rx();
       }
       //look in transmitter code for explanation of this element
       if (joyPosArray[4] == 1){
@@ -118,17 +124,17 @@ void loop(){
       } else if (joyPosArray[4] == -1) {
         servoStepSize = servoStepSize - 1;
       } else if (joyPosArray[4] == 2) {
-        rotationStepSize = rotationStepSize + 1;
+        rotationStepSize = rotationStepSize + 5;
       } else if (joyPosArray[4] == -2) {
-        rotationStepSize = rotationStepSize - 1;
+        rotationStepSize = rotationStepSize - 5;
       } else if (joyPosArray[4] == 3) {
-        linearStepSize = linearStepSize + 1;
+        linearStepSize = 5.0;
       } else if (joyPosArray[4] == -3) {
-        linearStepSize = linearStepSize -1;
+        linearStepSize = 0.1 ;
       }
     }
     radio.stopListening();
-    delay(20);
+    delay(5);
     posMetrics[0] = servoTopPos;
     posMetrics[1] = servoBotPos;
     posMetrics[2] = stepperArray[0].currentAngle;
