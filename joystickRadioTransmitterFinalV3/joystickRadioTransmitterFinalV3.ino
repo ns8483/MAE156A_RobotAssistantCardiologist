@@ -2,9 +2,12 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <LiquidCrystal_I2C.h>
+#include <avr/sleep.h>
 
 //instantiating LCD display
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x3F for a 16 chars and 2 line display
+
+int onOffBtn = 4;
 
 //Defining and instantiating radio and parameters
 int CE_PIN = 9;
@@ -39,11 +42,13 @@ void setup() {
   pinMode(LEFT_SWITCH, OUTPUT);
   digitalWrite(RIGHT_SWITCH, HIGH);
   digitalWrite(LEFT_SWITCH, HIGH);
+  pinMode(onOffBtn, INPUT);  // initialize the on off button pin as an input
 
   radio.begin();
   radio.openWritingPipe(addresses[1]);
   radio.openReadingPipe(1, addresses[0]);
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_MAX);
+  radio.flush_rx();
 
   //setting up LCD display
   lcd.init();
@@ -70,6 +75,12 @@ void setup() {
 }
 
 void loop() {
+  // check if the button is pressed
+  if (digitalRead(onOffBtn) == LOW) {
+    Serial.print("lol");
+  }
+    
+  
   radio.stopListening();
   //Sends it to radio for communication
   /*int joyPos[4];
@@ -119,7 +130,7 @@ void loop() {
           downCount = 3;
         }
       }
-      Serial.println(downCount);
+      //Serial.println(downCount);
       lcd.setCursor(19, downCount%4);
       lcd.print("*");
       delay(200);
@@ -151,7 +162,7 @@ void loop() {
       }
     }
     joyPosArray[4] = float(downCount);
-    Serial.println(downCount);
+    //Serial.println(downCount);
     delay(500);
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -166,7 +177,8 @@ void loop() {
 
   radio.write(&joyPosArray, sizeof(joyPosArray));  
   radio.startListening();
-  delay(5);
+  delay(40);
+  Serial.println(radio.available());
   if (radio.available()) {
     float posMetrics[4];
     radio.read(&posMetrics, sizeof(posMetrics));

@@ -17,8 +17,8 @@ void setup() {
 }
 
 void loop() {
-  const int posMetrics[4] = {1,2,3,4};
-  radio.write(&posMetrics, sizeof(posMetrics));
+  char text[32] = "Hello Worl";
+  radio.write(&text, sizeof(text));
   delay(5);
-  Serial.println(String(posMetrics[0]));
+  Serial.println(text);
 }
