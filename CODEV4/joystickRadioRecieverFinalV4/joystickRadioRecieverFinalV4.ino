@@ -27,7 +27,7 @@ float linPrevPos = 0;
 int SERVO_TOP_PIN = 12; // servo for top knob (change)
 int SERVO_BOT_PIN = 11; // servo for bottom knob (change)
 int servoTopPos = 90; // default position
-int prevSeroTopPos = servoTopPos; // keeps track of previous servo position
+int prevServoTopPos = servoTopPos; // keeps track of previous servo position
 int servoBotPos = 90; // default position
 int prevServoBotPos = servoBotPos; // keeps track of previous servo position
 // NRF Transceiver
@@ -52,11 +52,11 @@ RF24 radio(NRF_CE_PIN,NRF_CSN_PIN); // radio object creation
 
 //keeps track of what was changed so that can keep track for backtracking.
   //0 means no change, 1 means servo top, 2 means servo bottom, 3 means stepper, 4 means linear actuator 
-int manipulated = 0
+int manipulated = 0;
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Booting...\n");
+  Serial.println("Calibrating...\n");
   // servo setup
   for(int i=0;i<=servoTopPos;i++){
     servoTop.write(servoTopPos); // send servos to home right away so that will do when attached faster
@@ -78,16 +78,17 @@ void loop(){
   Stepper stepperHandle (EN_HANDLE_PIN, STEP_HANDLE_PIN, DIR_HANDLE_PIN, microSteps, handleGearRatio);
   Stepper stepperArray[] = {stepperTip, stepperHandle};
   LinearActuator linearActuator(ENA_PIN_NUM, IN1_PIN_NUM, IN2_PIN_NUM, ENCODERA_PIN_NUM, ENCODERB_PIN_NUM);
+  Serial.println("Calibrating Complete!");
   while(true) {
     radio.startListening();
     delay(5);
     if (radio.available()) {
       radio.read(&joyPosArray, sizeof(joyPosArray));
       delay(5);
-      Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
+      //Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
       if (joyPosArray[0] <= -1*joyCritical){
         if (servoTopPos != 0){
-          prevSeroTopPos = servoTopPos;
+          prevServoTopPos = servoTopPos;
           servoTopPos = servoTopPos - servoStepSize;
           servoTop.write(servoTopPos);
           delay(200); //wait for servo to reach this position
@@ -96,7 +97,7 @@ void loop(){
         }
       }else if (joyPosArray[0] >= joyCritical){
         if (servoTopPos != 180){
-          prevSeroTopPos = servoTopPos;
+          prevServoTopPos = servoTopPos;
           servoTopPos = servoTopPos + servoStepSize;
           servoTop.write(servoTopPos);
           delay(200); //wait for servo to reach this position
@@ -148,13 +149,13 @@ void loop(){
       } else if (joyPosArray[4] == -1) {
         servoStepSize = servoStepSize - 1;
       } else if (joyPosArray[4] == 2) {
-        rotationStepSize = rotationStepSize + 5;
+        rotationStepSize = rotationStepSize + 1;
       } else if (joyPosArray[4] == -2) {
-        rotationStepSize = rotationStepSize - 5;
+        rotationStepSize = rotationStepSize - 1;
       } else if (joyPosArray[4] == 3) {
-        linearStepSize = 5.0 + linearStepSize;
+        linearStepSize = 5*linearStepSize;
       } else if (joyPosArray[4] == -3) {
-        linearStepSize = 0.1 * linearStepSize;
+        linearStepSize = 0.5*linearStepSize;
       } //need to add code for servo linear actuator
       //look in transmitter code for explanation of this element
       else if (joyPosArray[5] == 2) {

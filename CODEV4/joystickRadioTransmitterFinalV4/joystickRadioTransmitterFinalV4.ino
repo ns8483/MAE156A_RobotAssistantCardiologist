@@ -2,6 +2,7 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <LiquidCrystal_I2C.h>
+#include <avr/sleep.h>
 
 //instantiating LCD display
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x3F for a 16 chars and 2 line display
@@ -24,6 +25,8 @@ int RIGHT_SWITCH = 2;
 #define LEFT_JOY_Y A3
 int LEFT_SWITCH = 3;
 
+int onOffPin = 4; // Pin connected to the onOff switch
+
 //joystick limit parameters
 int LR_MIN = -100;
 int LR_MAX = 100;
@@ -39,6 +42,7 @@ void setup() {
   pinMode(LEFT_SWITCH, OUTPUT);
   digitalWrite(RIGHT_SWITCH, HIGH);
   digitalWrite(LEFT_SWITCH, HIGH);
+  pinMode(onOffPin, INPUT_PULLUP); // onOff switch
 
   radio.begin();
   radio.openWritingPipe(addresses[1]);
@@ -52,24 +56,21 @@ void setup() {
   lcd.setCursor(0,0);
   lcd.print("T24 Cardio Robot");
   lcd.setCursor(0,1);
-  lcd.print("Connecting...");
-  delay(700);
+  lcd.print("Waiting for");
   lcd.setCursor(0,2);
-  lcd.print("Connected!");
-  delay(500);
+  lcd.print("Connection...");
+  radio.startListening();
+  while(!radio.available()){} // wait until connection is found
   lcd.clear();
-  
-  lcd.setCursor(0, 0);
-  lcd.print("R/L Flex: ");
-  lcd.setCursor(0, 1);
-  lcd.print("U/D Flex: ");
-  lcd.setCursor(0, 2);
-  lcd.print("Rotation: ");
-  lcd.setCursor(0, 3);
-  lcd.print("Translation: ");
+  lcd.setCursor(0,1);
+  lcd.print("Connected!");
+  delay(1000);
+  lcd.clear();
+  lcdSetup(); // setup lcd
 }
 
 void loop() {
+  while (emergencyStop()){} // while emergency stop is true wait
   radio.stopListening();
   //Sends it to radio for communication
   /*int joyPos[4];
@@ -164,15 +165,7 @@ void loop() {
     joyPosArray[5] = float(n);
     Serial.println(n);
     delay(500);
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("R/L Flex: ");
-    lcd.setCursor(0, 1);
-    lcd.print("U/D Flex: ");
-    lcd.setCursor(0, 2);
-    lcd.print("Rotation: ");
-    lcd.setCursor(0, 3);
-    lcd.print("Translation: ");
+    lcdSetup(); // re-setup lcd
   }
 
   //if right button is pressed, menu for step sizes to change appears
@@ -242,20 +235,13 @@ void loop() {
     joyPosArray[4] = float(downCount);
     Serial.println(downCount);
     delay(500);
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("R/L Flex: ");
-    lcd.setCursor(0, 1);
-    lcd.print("U/D Flex: ");
-    lcd.setCursor(0, 2);
-    lcd.print("Rotation: ");
-    lcd.setCursor(0, 3);
-    lcd.print("Translation: ");
+    lcdSetup(); // re-setup lcd
   }
 
   radio.write(&joyPosArray, sizeof(joyPosArray));  
   radio.startListening();
   delay(5);
+  // MAIN loop
   if (radio.available()) {
     float posMetrics[4];
     radio.read(&posMetrics, sizeof(posMetrics));
@@ -291,3 +277,36 @@ void loop() {
     Serial.println("lin actuator: " + linActuator);
   }
 }
+
+bool emergencyStop(){
+  static bool switched = true;
+  if (digitalRead(onOffPin) == LOW){ // Check if onOff switch is pressed
+    if (switched){
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("Emergency Stop");
+      lcd.setCursor(0, 2);
+      lcd.print("Activated"); 
+      switched = false;
+    }
+    return 1;
+  } else if (digitalRead(onOffPin) == HIGH){
+    if (!switched){lcdSetup();} // re-setup lcd}
+    switched = true;
+    return 0;
+  }
+}
+
+void lcdSetup(){
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("R/L Flex: ");
+  lcd.setCursor(0, 1);
+  lcd.print("U/D Flex: ");
+  lcd.setCursor(0, 2);
+  lcd.print("Rotation: ");
+  lcd.setCursor(0, 3);
+  lcd.print("Translation: ");
+}
+
+
