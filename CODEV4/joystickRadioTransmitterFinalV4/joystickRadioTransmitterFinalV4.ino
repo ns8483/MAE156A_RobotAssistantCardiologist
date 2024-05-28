@@ -2,7 +2,6 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <LiquidCrystal_I2C.h>
-#include <avr/sleep.h>
 
 //instantiating LCD display
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x3F for a 16 chars and 2 line display
@@ -66,7 +65,7 @@ void setup() {
   lcd.print("Connected!");
   delay(1000);
   lcd.clear();
-  lcdSetup(); // setup lcd
+  lcdSetup("R/L Flex: ", "L/D Flex: ", "Rotation: ", "Translation: "); // setup lcd
 }
 
 void loop() {
@@ -98,38 +97,10 @@ void loop() {
     //options are printed out
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Exit Menu");
-    lcd.setCursor(0,1);
-    lcd.print("Multiplane Angle");
-    lcd.setCursor(0,2);
-    lcd.print("Restore Previous");
+    lcdSetup("Exit Menu","Multiplane Angle", "Save Position", "Restore Position");
     delay(100);
     //toggle through menu using left joystick
-    int n = 0;
-    while(digitalRead(LEFT_SWITCH) == 1) {
-      if (map(analogRead(LEFT_JOY_Y), 0, 1023, 100, -100) == -100) {
-        lcd.setCursor(19, n);
-        lcd.print(" ");
-        if (n != 2) {
-          n = n + 1;
-        } else {
-          n = 0;
-        }
-      }
-      else if (map(analogRead(LEFT_JOY_Y), 0, 1023, 100, -100) == 100){
-        lcd.setCursor(19, n);
-        lcd.print(" ");
-        if (n != 0) {
-        n = n - 1;
-        } else {
-          n = 2;
-        }
-      }
-      Serial.println(n);
-      lcd.setCursor(19, n%4);
-      lcd.print("*");
-      delay(200);
-    }
+    int n = selectMenu(LEFT_SWITCH, LEFT_JOY_Y);
     if (n == 0){
       lcd.clear();
       lcd.setCursor(0,0);
@@ -146,13 +117,19 @@ void loop() {
       while(true){
         if (digitalRead(RIGHT_SWITCH) == 0) {
           lcd.clear();
-          lcd.print("PLANE ANGLE +");
+          lcd.print("PLANE ANGLE 0 to 180");
+          while (digitalRead(RIGHT_SWITCH)==0) {
+            delay(1);
+          }
           break;
         }
         if (digitalRead(LEFT_SWITCH)==0) {
           lcd.clear();
-          lcd.print("PLANE ANGLE -");
+          lcd.print("PLANE ANGLE 180 to 0");
           n = n * -1;
+          while (digitalRead(LEFT_SWITCH)==0) {
+            delay(1);
+          }
           break;
         }
       }
@@ -160,58 +137,31 @@ void loop() {
     if (n == 2) {
       lcd.clear();
       lcd.setCursor(0,0);
-      lcd.print("BACKTRACKING...");
+      lcd.print("POSITION SAVED");
+    }
+    if (n == 3) {
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("POSITION RESTORED");
     }
     joyPosArray[5] = float(n);
     Serial.println(n);
     delay(500);
-    lcdSetup(); // re-setup lcd
+    lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: "); // re-setup lcd
   }
 
   //if right button is pressed, menu for step sizes to change appears
   if (digitalRead(RIGHT_SWITCH) == 0) {
     lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Exit Menu");
-    lcd.setCursor(0,1);
-    lcd.print("Flexion Step");
-    lcd.setCursor(0,2);
-    lcd.print("Rotation Step");
-    lcd.setCursor(0,3);
-    lcd.print("Translation Step");
-    
+    lcdSetup("Exit Menu","Multiplane Angle", "Save Position", "Restore Position");
     delay(100);
-    int downCount = 0;
-    while(digitalRead(RIGHT_SWITCH) == 1) {
-      if (map(analogRead(RIGHT_JOY_Y), 0, 1023, 100, -100) == -100) {
-        lcd.setCursor(19, downCount);
-        lcd.print(" ");
-        if (downCount != 3) {
-          downCount = downCount + 1;
-        } else {
-          downCount = 0;
-        }
-      }
-      else if (map(analogRead(RIGHT_JOY_Y), 0, 1023, 100, -100) == 100){
-        lcd.setCursor(19, downCount);
-        lcd.print(" ");
-        if (downCount != 0) {
-        downCount = downCount - 1;
-        } else {
-          downCount = 3;
-        }
-      }
-      Serial.println(downCount);
-      lcd.setCursor(19, downCount%4);
-      lcd.print("*");
-      delay(200);
-    }
-    if (downCount == 0){
+    int d = selectMenu(RIGHT_SWITCH, RIGHT_JOY_Y);
+    if (d == 0){
       lcd.clear();
       lcd.setCursor(0,0);
       lcd.print("EXITING...");
     }
-    if (downCount > 0){
+    if (d > 0){
       lcd.clear();
       lcd.setCursor(1,0);
       lcd.print("<- (-)");
@@ -227,15 +177,15 @@ void loop() {
         if (digitalRead(LEFT_SWITCH)==0) {
           lcd.clear();
           lcd.print("STEP DECREASED");
-          downCount = downCount * -1;
+          d = d * -1;
           break;
         }
       }
     }
-    joyPosArray[4] = float(downCount);
-    Serial.println(downCount);
+    joyPosArray[4] = float(d);
+    Serial.println(d);
     delay(500);
-    lcdSetup(); // re-setup lcd
+    lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: ");
   }
 
   radio.write(&joyPosArray, sizeof(joyPosArray));  
@@ -291,22 +241,59 @@ bool emergencyStop(){
     }
     return 1;
   } else if (digitalRead(onOffPin) == HIGH){
-    if (!switched){lcdSetup();} // re-setup lcd}
+    if (!switched){lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: ");} // re-setup lcd
     switched = true;
     return 0;
   }
 }
 
-void lcdSetup(){
+void lcdSetup(String s1, String s2, String s3, String s4){
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("R/L Flex: ");
+  lcd.print(s1);
   lcd.setCursor(0, 1);
-  lcd.print("U/D Flex: ");
+  lcd.print(s2);
   lcd.setCursor(0, 2);
-  lcd.print("Rotation: ");
+  lcd.print(s3);
   lcd.setCursor(0, 3);
-  lcd.print("Translation: ");
+  lcd.print(s4);
 }
 
-
+int selectMenu(int button, int analogPin) {
+  int downCount = 0;
+  int joy = 0;
+  int joy_max_crit = 100;
+  int joy_min_crit = -100;
+  if (analogPin == RIGHT_JOY_Y) {
+    joy = RIGHT_JOY_Y;
+  } else {
+    joy = LEFT_JOY_Y;
+    joy_max_crit = -100;
+    joy_min_crit = 100;
+  }
+  while(digitalRead(button) == 1) {
+    if (map(analogRead(joy), 0, 1023, joy_min_crit, joy_max_crit) == 100) {
+      lcd.setCursor(19, downCount);
+      lcd.print(" ");
+      if (downCount != 3) {
+        downCount = downCount + 1;
+      } else {
+        downCount = 0;
+      }
+    }
+    else if (map(analogRead(joy), 0, 1023, joy_min_crit, joy_max_crit) == -100){
+      lcd.setCursor(19, downCount);
+      lcd.print(" ");
+      if (downCount != 0) {
+      downCount = downCount - 1;
+      } else {
+        downCount = 3;
+      }
+    }
+    Serial.println(downCount);
+    lcd.setCursor(19, downCount%4);
+    lcd.print("*");
+    delay(200);
+  }
+  return downCount;
+ }
