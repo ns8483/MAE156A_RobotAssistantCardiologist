@@ -26,12 +26,7 @@ int LEFT_SWITCH = 3;
 
 int onOffPin = 4; // Pin connected to the onOff switch
 
-//joystick limit parameters
-int LR_MIN = -100;
-int LR_MAX = 100;
-int UD_MIN = -100;
-int UD_MAX = 100;
-
+int t = 0; //time paratmeter for multiplane servo motor in ms
 
 void setup() {
   Serial.begin(115200);
@@ -74,7 +69,7 @@ void loop() {
   //Sends it to radio for communication
   /*int joyPos[4];
   int joyPosArray[4];*/
-  float joyPosArray[6];
+  float joyPosArray[7];
   /*joyPos[0]= analogRead(RIGHT_JOY_X);
   joyPos[1]= analogRead(RIGHT_JOY_Y);
   joyPos[2] = analogRead(LEFT_JOY_X);
@@ -91,6 +86,8 @@ void loop() {
     //1 means plane angle increase and -1 means plane angle decrease
       //2 means that previous position is restored
   joyPosArray[5] = 0;
+  //time to press button multiplane
+  joyPosArray[6] = 0;
 
   //when left switch is pressed, there is an option to change the multiplane angle or restore the previous position
   if (digitalRead(LEFT_SWITCH) == 0) {
@@ -120,6 +117,7 @@ void loop() {
           lcd.print("PLANE ANGLE 0 to 180");
           while (digitalRead(RIGHT_SWITCH)==0) {
             delay(1);
+            t = t+1;
           }
           break;
         }
@@ -129,6 +127,7 @@ void loop() {
           n = n * -1;
           while (digitalRead(LEFT_SWITCH)==0) {
             delay(1);
+            t = t+1;
           }
           break;
         }
@@ -145,6 +144,7 @@ void loop() {
       lcd.print("POSITION RESTORED");
     }
     joyPosArray[5] = float(n);
+    joyPosArray[6] = float(t);
     Serial.println(n);
     delay(500);
     lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: "); // re-setup lcd
