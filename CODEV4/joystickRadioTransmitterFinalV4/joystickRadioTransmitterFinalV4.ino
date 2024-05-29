@@ -153,7 +153,7 @@ void loop() {
   //if right button is pressed, menu for step sizes to change appears
   if (digitalRead(RIGHT_SWITCH) == 0) {
     lcd.clear();
-    lcdSetup("Exit Menu","Multiplane Angle", "Save Position", "Restore Position");
+    lcdSetup("Exit Menu","Flexion Step", "Rotation Step", "Translation Step");
     delay(100);
     int d = selectMenu(RIGHT_SWITCH, RIGHT_JOY_Y);
     if (d == 0){
