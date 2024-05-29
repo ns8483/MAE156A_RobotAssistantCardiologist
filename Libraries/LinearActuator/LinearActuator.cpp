@@ -9,6 +9,7 @@
 #include "Arduino.h"
 
 LinearActuator* LinearActuator::instancePointer = nullptr;
+bool LinearActuator::finishedMoving = true;
 
 static void LinearActuator::interruptHandler() {
   if (instancePointer != nullptr) {
@@ -85,7 +86,9 @@ void LinearActuator::incrementalPos(float deltaX, int direction) {
 }
 
 bool LinearActuator::finishedTargetSteps(float deltaX) {
-  if(deltaX < 0){decelerationPosError = -1*decelerationPosError;}
+  if((deltaX < 0 && !(decelerationPosError < 0)) || (deltaX > 0 && !(decelerationPosError > 0))){
+    decelerationPosError = -1*decelerationPosError; // if posError has wrong sign for movement, update it
+    }
   static float oldPosition = position; // set initial position to current position
   static float targetPosition = oldPosition + deltaX - decelerationPosError; // calculate targetPosition 
   // update the statics with new values upon successful prior completion
