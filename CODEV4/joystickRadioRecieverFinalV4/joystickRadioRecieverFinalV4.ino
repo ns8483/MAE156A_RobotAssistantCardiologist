@@ -3,8 +3,8 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <LinearActuator.h>
-#include <Stepper.h>
+#include "LinearActuator.h"
+#include "Stepper.h"
 // Tip Rotation
 int EN_TIP_PIN = 10; // Enable
 int STEP_TIP_PIN = 9; // Step
@@ -15,14 +15,12 @@ int EN_HANDLE_PIN = 4; // Enable
 int STEP_HANDLE_PIN = 6; // Step
 int DIR_HANDLE_PIN = 5; // Direction
 double handleGearRatio = 6.67; //6.67:1 ratio
-float stepperPrevPos = 0;
 // Linear Actuator
 int ENA_PIN_NUM = 24; // Motor contoller voltage control (PWM) (change)
 int IN1_PIN_NUM = 26; // Motor direction (change)
 int IN2_PIN_NUM = 28; // Motor direction (change)
 int ENCODERA_PIN_NUM = 3; // Hall Sensor digital signal 
 int ENCODERB_PIN_NUM = 2; // 90 deg phase difference
-float linPrevPos = 0;
 // Knob Rotation
 int SERVO_TOP_PIN = 12; // servo for top knob (change)
 int SERVO_BOT_PIN = 11; // servo for bottom knob (change)
@@ -57,7 +55,8 @@ Servo multiplaneServo; //multiplane angle control servo
 RF24 radio(NRF_CE_PIN,NRF_CSN_PIN); // radio object creation
 
 //keeps track of what was changed so that can keep track for backtracking.
-float prevPos[4] = {};
+float prevPos[4] = {90,90,0,0};
+float savedPos[4] = {90,90,0,0};
 
 void setup() {
   Serial.begin(115200);
@@ -75,7 +74,7 @@ void setup() {
   radio.begin();
   radio.openReadingPipe(1, addresses[1]); // 00002
   radio.openWritingPipe(addresses[0]);
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_MAX);
 }
 
 void loop(){
@@ -89,6 +88,7 @@ void loop(){
     radio.startListening();
     delay(5);
     if (radio.available()) {
+      //Serial.println("connected");
       radio.read(&joyPosArray, sizeof(joyPosArray));
       delay(5);
       //Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
@@ -178,31 +178,54 @@ void loop(){
       }
       //look in transmitter code for explanation of this element
       else if (joyPosArray[5] == 2) {
-        savedPos[] = prevPos;
+        Serial.println("**************************");
+        Serial.println(prevPos[0]);
+        Serial.println(prevPos[1]);
+        Serial.println(prevPos[2]);
+        Serial.println(prevPos[3]);
+        Serial.println("**************************");
+        for (int i = 0; i < 4; i++) {
+          savedPos[i] = prevPos[i];
+        }
       } else if (joyPosArray[5] == 3) {
+        Serial.println("**************************");
+        Serial.println(savedPos[0]);
+        Serial.println(savedPos[1]);
+        Serial.println(savedPos[2]);
+        Serial.println(savedPos[3]);
+        Serial.println("**************************");
         servoTop.write(savedPos[0]);
+        servoTopPos = savedPos[0];
+        radio.flush_rx();
         servoBot.write(savedPos[1]);
+        servoBotPos = savedPos[1];
+        radio.flush_rx();
         float stepperDiff = stepperArray[0].currentAngle - savedPos[2];
         if (stepperDiff < 0) {
           Stepper::incrementalPosMulti(abs(stepperDiff),1,stepperArray); // synchronous stepper movement direction 0 (CCW)
+          radio.flush_rx();
         } else {
           Stepper::incrementalPosMulti(abs(stepperDiff),0,stepperArray); // synchronous stepper movement direction 0 (CCW)
+          radio.flush_rx();
         }
         float linDiff = linearActuator.position - savedPos[3];
         if (linDiff < 0) {
-          linearActuator.incrementalPos(abs(linDiff), 0);
-        } else {
           linearActuator.incrementalPos(abs(linDiff), 1);
+          radio.flush_rx();
+        } else {
+          linearActuator.incrementalPos(abs(linDiff), 0);
+          radio.flush_rx();
         }
-        radio.flush_rx();
+      }
     }
+    radio.flush_rx();
     radio.stopListening();
+    //Serial.println("stopped listening");
     delay(5);
     posMetrics[0] = servoTopPos;
     posMetrics[1] = servoBotPos;
     posMetrics[2] = stepperArray[0].currentAngle;
     posMetrics[3] = linearActuator.position;
     radio.write(&posMetrics, sizeof(posMetrics));
-
   }
 }
