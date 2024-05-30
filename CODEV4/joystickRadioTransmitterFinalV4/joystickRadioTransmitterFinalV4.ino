@@ -41,7 +41,8 @@ void setup() {
   radio.begin();
   radio.openWritingPipe(addresses[1]);
   radio.openReadingPipe(1, addresses[0]);
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_MAX);
+  radio.flush_rx();
 
   //setting up LCD display
   lcd.init();
@@ -60,7 +61,7 @@ void setup() {
   lcd.print("Connected!");
   delay(1000);
   lcd.clear();
-  lcdSetup("R/L Flex: ", "L/D Flex: ", "Rotation: ", "Translation: "); // setup lcd
+  lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: "); // setup lcd
 }
 
 void loop() {
@@ -144,8 +145,9 @@ void loop() {
       lcd.print("POSITION RESTORED");
     }
     joyPosArray[5] = float(n);
+    Serial.println(joyPosArray[5]);
     joyPosArray[6] = float(t);
-    Serial.println(n);
+    Serial.println(joyPosArray[6]);
     delay(500);
     lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: "); // re-setup lcd
   }
@@ -187,7 +189,17 @@ void loop() {
     delay(500);
     lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: ");
   }
+  Serial.println("**************************");
+  Serial.println(joyPosArray[0]);
+  Serial.println(joyPosArray[1]);
+  Serial.println(joyPosArray[2]);
+  Serial.println(joyPosArray[3]);
+  Serial.println(joyPosArray[4]);
+  Serial.println(joyPosArray[5]);
+  Serial.println(joyPosArray[6]);
+  Serial.println("**************************");
 
+  //Serial.println(joyPosArray[5]);
   radio.write(&joyPosArray, sizeof(joyPosArray));  
   radio.startListening();
   delay(5);
@@ -215,16 +227,16 @@ void loop() {
     }
     lcd.setCursor(10, 0);
     lcd.print(topServo + char(223));
-    Serial.println("top servo: " + topServo);
+    //Serial.println("top servo: " + topServo);
     lcd.setCursor(10, 1);
     lcd.print(botServo + char(223));
-    Serial.println("bot servo: " + botServo);
+    //Serial.println("bot servo: " + botServo);
     lcd.setCursor(10, 2);
     lcd.print(stepper + char(223));
-    Serial.println("stepper: " + stepper);
+    //Serial.println("stepper: " + stepper);
     lcd.setCursor(13, 3);
     lcd.print(linActuator + " mm");
-    Serial.println("lin actuator: " + linActuator);
+    //Serial.println("lin actuator: " + linActuator);
   }
 }
 
