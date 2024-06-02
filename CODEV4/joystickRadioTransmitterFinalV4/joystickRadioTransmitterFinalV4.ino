@@ -106,33 +106,7 @@ void loop() {
     }
     //option to increase or decrease multiplane angle
     if (n == 1){
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print("<- (-)");
-      lcd.setCursor(13,0);
-      lcd.print("(+) ->");
-      delay(300);
-      while(true){
-        if (digitalRead(RIGHT_SWITCH) == 0) {
-          lcd.clear();
-          lcd.print("PLANE ANGLE 0 to 180");
-          while (digitalRead(RIGHT_SWITCH)==0) {
-            delay(1);
-            t = t+1;
-          }
-          break;
-        }
-        if (digitalRead(LEFT_SWITCH)==0) {
-          lcd.clear();
-          lcd.print("PLANE ANGLE 180 to 0");
-          n = n * -1;
-          while (digitalRead(LEFT_SWITCH)==0) {
-            delay(1);
-            t = t+1;
-          }
-          break;
-        }
-      }
+      n = choiceButtons("<- (-)","(+) ->","MOTOR CCW","MOTOR CW",n);
     }
     if (n == 2) {
       lcd.clear();
@@ -164,25 +138,7 @@ void loop() {
       lcd.print("EXITING...");
     }
     if (d > 0){
-      lcd.clear();
-      lcd.setCursor(1,0);
-      lcd.print("<- (-)");
-      lcd.setCursor(13,0);
-      lcd.print("(+) ->");
-      delay(300);
-      while(true){
-        if (digitalRead(RIGHT_SWITCH) == 0) {
-          lcd.clear();
-          lcd.print("STEP INCREASED");
-          break;
-        }
-        if (digitalRead(LEFT_SWITCH)==0) {
-          lcd.clear();
-          lcd.print("STEP DECREASED");
-          d = d * -1;
-          break;
-        }
-      }
+      d = choiceButtons("<- (-)","(+) ->","STEP DECREASED","STEP INCREASED",d);
     }
     joyPosArray[4] = float(d);
     Serial.println(d);
@@ -308,4 +264,27 @@ int selectMenu(int button, int analogPin) {
     delay(200);
   }
   return downCount;
- }
+}
+
+int choiceButtons(String choice1, String choice2, String affirm1, String affirm2, int count) {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print(choice1);
+  lcd.setCursor(13,0);
+  lcd.print(choice2);
+  delay(300);
+  while(true){
+    if (digitalRead(RIGHT_SWITCH) == 0) {
+      lcd.clear();
+      lcd.print(affirm2);
+      break;
+    }
+    if (digitalRead(LEFT_SWITCH)==0) {
+      lcd.clear();
+      lcd.print(affirm1);
+      count = count * -1;
+      break;
+    }
+  }
+  return count;
+}
