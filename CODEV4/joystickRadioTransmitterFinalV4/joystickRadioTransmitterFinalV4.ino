@@ -106,7 +106,7 @@ void loop() {
     }
     //option to increase or decrease multiplane angle
     if (n == 1){
-      n = choiceButtons("<- (-)","(+) ->","MOTOR CCW","MOTOR CW",n);
+      n = choiceButtons("<- (-)","(+) ->","MOTOR CW","MOTOR CCW",n);
     }
     if (n == 2) {
       lcd.clear();
