@@ -33,6 +33,7 @@ int MULTIPLANE_PIN = 44;
 int critAnglePos = 0; //CHANGE THESE VALUES OR IT WON'T WORK MIGHT BREAK**************************************
 int critAngleNeg = 180;
 int neutralAngle = 90;
+int multiPlaneMark = 0; //0 means that currently is at neutral, 1 means that currently at CCW mark, -1 means that at CW mark
 // NRF Transceiver
 int NRF_CSN_PIN = 8;
 int NRF_CE_PIN = 7;
@@ -46,7 +47,7 @@ float rotationStepSize = 1.00; // default rotation step size [deg]
 float servoStepSize = 1.00; // default knob rotation step size [deg]
 int microSteps = 8; // default number of stepper microsteps
 float joyCritical = 80.0; // Joystick critical actuation value after mapping
-float joyPosArray[7] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
+float joyPosArray[6] = {}; // [0]: x-right joystick [1]: y-right joystick [2]: x-left joystick [3]: y-left joystick
 float posMetrics[4] = {}; // [0]: top servo, [1]: bottom servo, [2]: stepper motor, [3]: linear actuator
 //Global objects
 Servo servoTop; // top servo object creation
@@ -156,25 +157,27 @@ void loop(){
         linearStepSize = 0.5*linearStepSize;
       } //need to calculate critical angle that button is pressed at and update code here **************************************************************************
       else if (joyPosArray[5] == 1) {
-        multiplaneServo.write(critAnglePos);
-        radio.flush_rx();
-        int t = 0;
-        while (t < int(joyPosArray[6])) {
-          delay(1);
-          t++;
+        if (multiPlaneMark != 1) {
+          if (multiPlaneMark ==0) {
+            multiplaneServo.write(critAnglePos);
+          } else if (n == -1) {
+            multiplaneServo.write(neutralAngle);
+          }
+          multiPlaneMark = multiPlaneMark + 1;
+          delay(200);
+          radio.flush_rx();
         }
-        multiplaneServo.write(neutralAngle);
-        radio.flush_rx();
       } else if(joyPosArray[5] == -1) {
-        multiplaneServo.write(critAngleNeg);
-        radio.flush_rx();
-        int t = 0;
-        while (t < int(joyPosArray[6])) {
-          delay(1);
-          t++;
+        if (multiPlaneMark != -1) {
+          if (multiPlaneMark ==0) {
+            multiplaneServo.write(critAngleNeg);
+          } else if (n == 1) {
+            multiplaneServo.write(neutralAngle);
+          }
+          multiPlaneMark = multiPlaneMark - 1;
+          delay(200);
+          radio.flush_rx();
         }
-        multiplaneServo.write(neutralAngle);
-        radio.flush_rx();
       }
       //look in transmitter code for explanation of this element
       else if (joyPosArray[5] == 2) {
