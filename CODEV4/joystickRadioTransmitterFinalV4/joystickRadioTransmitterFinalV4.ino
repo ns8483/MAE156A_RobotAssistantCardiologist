@@ -26,8 +26,6 @@ int LEFT_SWITCH = 3;
 
 int onOffPin = 4; // Pin connected to the onOff switch
 
-int t = 0; //time paratmeter for multiplane servo motor in ms
-
 void setup() {
   Serial.begin(115200);
 
@@ -70,7 +68,7 @@ void loop() {
   //Sends it to radio for communication
   /*int joyPos[4];
   int joyPosArray[4];*/
-  float joyPosArray[7];
+  float joyPosArray[6];
   /*joyPos[0]= analogRead(RIGHT_JOY_X);
   joyPos[1]= analogRead(RIGHT_JOY_Y);
   joyPos[2] = analogRead(LEFT_JOY_X);
@@ -87,8 +85,6 @@ void loop() {
     //1 means plane angle increase and -1 means plane angle decrease
       //2 means that previous position is restored
   joyPosArray[5] = 0;
-  //time to press button multiplane
-  joyPosArray[6] = 0;
 
   //when left switch is pressed, there is an option to change the multiplane angle or restore the previous position
   if (digitalRead(LEFT_SWITCH) == 0) {
