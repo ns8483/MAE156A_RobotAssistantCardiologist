@@ -1,3 +1,4 @@
+
 // Libraries
 #include <Servo.h>
 #include <SPI.h>
@@ -30,9 +31,9 @@ int servoBotPos = 90; // default position
 int prevServoBotPos = servoBotPos; // keeps track of previous servo position
 // Multiplane Angle Control
 int MULTIPLANE_PIN = 44;
-int critAnglePos = 0; //CHANGE THESE VALUES OR IT WON'T WORK MIGHT BREAK**************************************
-int critAngleNeg = 180;
-int neutralAngle = 90;
+int critAnglePos = 30; //CHANGE THESE VALUES OR IT WON'T WORK MIGHT BREAK**************************************
+int critAngleNeg = 90;
+int neutralAngle = 60;
 int multiPlaneMark = 0; //0 means that currently is at neutral, 1 means that currently at CCW mark, -1 means that at CW mark
 // NRF Transceiver
 int NRF_CSN_PIN = 8;
@@ -68,6 +69,7 @@ void setup() {
     servoBot.write(servoBotPos);
     delay(20);
   }
+  multiplaneServo.write(neutralAngle);
   servoTop.attach(SERVO_TOP_PIN); // attach feedback pins to servo objects
   servoBot.attach(SERVO_BOT_PIN);
   multiplaneServo.attach(MULTIPLANE_PIN);
@@ -89,7 +91,7 @@ void loop(){
     radio.startListening();
     delay(5);
     if (radio.available()) {
-      //Serial.println("connected");
+      //Serial.println("connected");2
       radio.read(&joyPosArray, sizeof(joyPosArray));
       delay(5);
       //Serial.println(String("x1: ") + String(joyPosArray[0]) + String("  y1: ") + String(joyPosArray[1]) + String("  x2: ") + String(joyPosArray[2]) + String("  y2: ") + String(joyPosArray[3]));
@@ -157,27 +159,33 @@ void loop(){
         linearStepSize = 0.5*linearStepSize;
       } //need to calculate critical angle that button is pressed at and update code here **************************************************************************
       else if (joyPosArray[5] == 1) {
-        if (multiPlaneMark != 1) {
+        if (multiPlaneMark < 1) {
           if (multiPlaneMark ==0) {
             multiplaneServo.write(critAnglePos);
-          } else if (n == -1) {
+            multiPlaneMark = 1;
+          } else if ( multiPlaneMark== -1) {
             multiplaneServo.write(neutralAngle);
+            multiPlaneMark = 0;
           }
-          multiPlaneMark = multiPlaneMark + 1;
           delay(200);
           radio.flush_rx();
         }
+        Serial.println(multiPlaneMark);
+        Serial.println(multiplaneServo.read());
       } else if(joyPosArray[5] == -1) {
-        if (multiPlaneMark != -1) {
+        if (multiPlaneMark > -1) {
           if (multiPlaneMark ==0) {
             multiplaneServo.write(critAngleNeg);
-          } else if (n == 1) {
+            multiPlaneMark = -1;
+          } else if (multiPlaneMark == 1) {
             multiplaneServo.write(neutralAngle);
+            multiPlaneMark = 0;
           }
-          multiPlaneMark = multiPlaneMark - 1;
           delay(200);
           radio.flush_rx();
         }
+        Serial.println(multiPlaneMark);
+        Serial.println(multiplaneServo.read());
       }
       //look in transmitter code for explanation of this element
       else if (joyPosArray[5] == 2) {
