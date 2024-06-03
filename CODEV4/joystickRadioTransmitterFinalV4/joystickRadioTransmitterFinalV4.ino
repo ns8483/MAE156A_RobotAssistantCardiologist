@@ -103,6 +103,7 @@ void loop() {
     //option to increase or decrease multiplane angle
     if (n == 1){
       n = choiceButtons("<- (-)","(+) ->","MOTOR CW","MOTOR CCW",n);
+      delay(200);
     }
     if (n == 2) {
       lcd.clear();
@@ -116,7 +117,6 @@ void loop() {
     }
     joyPosArray[5] = float(n);
     Serial.println(joyPosArray[5]);
-    joyPosArray[6] = float(t);
     Serial.println(joyPosArray[6]);
     delay(500);
     lcdSetup("R/L Flex: ", "U/D Flex: ", "Rotation: ", "Translation: "); // re-setup lcd
@@ -135,6 +135,7 @@ void loop() {
     }
     if (d > 0){
       d = choiceButtons("<- (-)","(+) ->","STEP DECREASED","STEP INCREASED",d);
+      delay(200);
     }
     joyPosArray[4] = float(d);
     Serial.println(d);
