@@ -36,7 +36,7 @@ Diagram of Procedure Setup with our Mechanism
 
 ![plot](Images/FinalFabrication.png)
 
-<h2> Controller:
+<h2> Controller:<br>
 
 <h6> This allows for full control of rotatiton of tip and housing, linear translation, knob engagement, step size adjustment, multi-plane angle control, and position memory as shown in the video.
 
