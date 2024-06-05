@@ -1,9 +1,9 @@
 # MAE156A_RobotAssistantCardiologist
 <h2> Contributions:
 
-<h6> Anika Bhattacharya: Knob Engagement and Housing Design<br>
-Cristian Nunez-Alcazar: Manuafacturing Lead, Multiplane Angle Design<br>
-Noah Jones: Custom Stepper and Linear Actuator Libraries, Data Analysis, Tip Control Mechanism, Arm Design<br>
+<h6> Anika Bhattacharya: Knob Engagement and Housing Design and Fabrication<br>
+Cristian Nunez-Alcazar: Manuafacturing Lead, Multiplane Angle Mechanism Design and Fabrication<br>
+Noah Jones: Custom Stepper and Linear Actuator Libraries, Data Analysis, Tip Control Mechanism Design and Fabrication, Arm Design<br>
 Nithya Srinivasan: Software Lead, Knob Engagement Design, Arm Fabrication, Controller Logic and Integration
 
 <h2>Project Background:
