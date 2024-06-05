@@ -46,5 +46,5 @@ Diagram of Procedure Setup with our Mechanism
 
 <h6> Anika Bhattacharya: Knob Engagement and Housing Design<br>
 Cristian Nunez-Alcazar: Manuafacturing Lead, Multiplane Angle Design<br>
-Noah Jones: Custom Stepper and Linear Actuator Libraries, Tip Control Mechanism, Arm Design<br>
+Noah Jones: Custom Stepper and Linear Actuator Libraries, Data Analysis, Tip Control Mechanism, Arm Design<br>
 Nithya Srinivasan: Software Lead, Knob Engagement Design, Arm Fabrication
