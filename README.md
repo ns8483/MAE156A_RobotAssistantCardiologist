@@ -1,4 +1,10 @@
 # MAE156A_RobotAssistantCardiologist
+<h2> Contributions:
+
+<h6> Anika Bhattacharya: Knob Engagement and Housing Design<br>
+Cristian Nunez-Alcazar: Manuafacturing Lead, Multiplane Angle Design<br>
+Noah Jones: Custom Stepper and Linear Actuator Libraries, Data Analysis, Tip Control Mechanism, Arm Design<br>
+Nithya Srinivasan: Software Lead, Knob Engagement Design, Arm Fabrication, Controller Logic and Integration, Wireless Communication
 
 <h2>Project Background:
 
@@ -41,10 +47,3 @@ Diagram of Procedure Setup with our Mechanism
 <h6> This allows for full control of rotatiton of tip and housing, linear translation, knob engagement, step size adjustment, multi-plane angle control, and position memory as shown in the video.<br>
 
 ![plot](Images/Controller.png)
-
-<h2> Contributions:
-
-<h6> Anika Bhattacharya: Knob Engagement and Housing Design<br>
-Cristian Nunez-Alcazar: Manuafacturing Lead, Multiplane Angle Design<br>
-Noah Jones: Custom Stepper and Linear Actuator Libraries, Data Analysis, Tip Control Mechanism, Arm Design<br>
-Nithya Srinivasan: Software Lead, Knob Engagement Design, Arm Fabrication, Controller Logic and Integration, Wireless Communication
