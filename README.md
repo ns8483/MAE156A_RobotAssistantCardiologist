@@ -4,7 +4,7 @@
 <h6> Anika Bhattacharya: Knob Engagement and Housing Design<br>
 Cristian Nunez-Alcazar: Manuafacturing Lead, Multiplane Angle Design<br>
 Noah Jones: Custom Stepper and Linear Actuator Libraries, Data Analysis, Tip Control Mechanism, Arm Design<br>
-Nithya Srinivasan: Software Lead, Knob Engagement Design, Arm Fabrication, Controller Logic and Integration, Wireless Communication
+Nithya Srinivasan: Software Lead, Knob Engagement Design, Arm Fabrication, Controller Logic and Integration
 
 <h2>Project Background:
 
